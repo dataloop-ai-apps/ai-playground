@@ -90,12 +90,7 @@
         "config": {
           "isCustomServer": true
         },
-        "initInputs": [
-          {
-            "name": "pipeline_name",
-            "type": "String"
-          }
-        ],
+        "initInputs": [],
         "functions": [
           {
             "name": "start_pipe",
