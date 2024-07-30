@@ -10,11 +10,6 @@
     "Application Type": "Pipeline Node",
     "Node Type": "Integration"
   },
-  "codebase": {
-    "type": "git",
-    "gitUrl": "https://github.com/dataloop-ai-apps/ingest-gradio.git",
-    "gitTag": "0.1.6"
-  },
   "components": {
     "panels": [
       {
