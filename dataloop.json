@@ -1,133 +1,138 @@
 {
-    "displayName": "Ingest Gradio",
-    "name": "ingest-gradio",
-    "scope": "project",
-    "version": "0.1.43",
-    "attributes": {
-        "Provider": "Gradio",
-        "deployed By": "Dataloop",
-        "Category": "Application",
-        "Application Type": "Pipeline Node",
-        "Node Type": "Integration"
-    },
-    "components": {
-        "panels": [
-            {
-                "name": "ingest-gradio",
-                "supportedSlots": [
-                    {
-                        "type": "floatingWindow",
-                        "configuration": {
-                            "layout": {
-                                "width": 455,
-                                "height": 340,
-                                "resizable": true,
-                                "backgroundColor": "dl-color-studio-panel",
-                                "position": {
-                                    "x": 775,
-                                    "y": 55
-                                }
-                            },
-                            "routes": [
-                                "modelOverview"
-                            ]
-                        }
-                    }
-                ],
-                "conditions": {
-                    "resources": [
-                    ]
+  "displayName": "Ingest Gradio",
+  "name": "ingest-gradio",
+  "scope": "project",
+  "version": "0.0.1",
+  "attributes": {
+    "Provider": "Gradio",
+    "deployed By": "Dataloop",
+    "Category": "Application",
+    "Application Type": "Pipeline Node",
+    "Node Type": "Integration"
+  },
+  "codebase": {
+    "type": "git",
+    "gitUrl": "https://github.com/dataloop-ai-apps/ingest-gradio.git",
+    "gitTag": "0.0.1"
+  },
+  "components": {
+    "panels": [
+      {
+        "name": "ingest-gradio",
+        "supportedSlots": [
+          {
+            "type": "floatingWindow",
+            "configuration": {
+              "layout": {
+                "width": 455,
+                "height": 340,
+                "resizable": true,
+                "backgroundColor": "dl-color-studio-panel",
+                "position": {
+                  "x": 775,
+                  "y": 55
                 }
+              },
+              "routes": [
+                "modelOverview"
+              ]
             }
+          }
         ],
-        "pipelineNodes": [
+        "conditions": {
+          "resources": [
+          ]
+        }
+      }
+    ],
+    "pipelineNodes": [
+      {
+        "invoke": {
+          "type": "function",
+          "namespace": "gradio-service.gradio-module.start_pipe"
+        },
+        "categories": [
+          "Integrations"
+        ],
+        "name": "Gradio Start",
+        "displayName": "Gradio Start",
+        "description": "Gradio Start",
+        "scope": "project",
+        "configuration": {
+          "fields": [
             {
-                "invoke": {
-                    "type": "function",
-                    "namespace": "gradio-service.gradio-module.start_pipe"
-                },
-                "categories": [
-                    "Integrations"
-                ],
-                "name": "Gradio Start",
-                "displayName": "Gradio Start",
-                "description": "Gradio Start",
-                "scope": "project",
-                "configuration": {
-                    "fields": [
-                        {
-                            "name": "name",
-                            "title": "Node Name",
-                            "props": {
-                                "title": true,
-                                "type": "string",
-                                "default": "Gradio",
-                                "required": true,
-                                "placeholder": "Insert node name"
-                            },
-                            "rules": [
-                                {
-                                    "type": "required",
-                                    "effect": "error"
-                                }
-                            ],
-                            "widget": "dl-input"
-                        }
-                    ]
+              "name": "name",
+              "title": "Node Name",
+              "props": {
+                "title": true,
+                "type": "string",
+                "default": "Gradio",
+                "required": true,
+                "placeholder": "Insert node name"
+              },
+              "rules": [
+                {
+                  "type": "required",
+                  "effect": "error"
                 }
+              ],
+              "widget": "dl-input"
             }
-        ],
-        "modules": [
-            {
-                "name": "gradio-module",
-                "entryPoint": "app.py",
-                "className": "GradioRunner",
-                "config": {
-                    "isCustomServer": true
-                },
-                "versions": {
-                    "dtlpy": "1.93.9"
-                },
-                "initInputs": [],
-                "functions": [
-                    {
-                        "name": "start_pipe",
-                        "input": [
-                            {
-                                "type": "Item",
-                                "name": "item"
-                            }
-                        ],
-                        "output": [
-                            {
-                                "type": "Item",
-                                "name": "item"
-                            }
-                        ],
-                        "displayIcon": "icon-dl-gradio",
-                        "displayName": "Gradio"
-                    }
-                ]
-            }
-        ],
-        "services": [
-            {
-                "name": "gradio-service",
-                "moduleName": "gradio-module",
-                "panelNames": [
-                    "ingest-gradio"
-                ],
-                "runtime": {
-                    "runnerImage": "gcr.io/viewo-g/piper/agent/apps/ingest-gradio:0.1.14",
-                    "podType": "regular-xs",
-                    "concurrency": 10,
-                    "autoscaler": {
-                        "minReplicas": 1,
-                        "maxReplicas": 2,
-                        "queueLength": 10
-                    }
-                }
-            }
+          ]
+        }
+      }
+    ],
+    "modules": [
+      {
+        "name": "gradio-module",
+        "entryPoint": "app.py",
+        "className": "GradioRunner",
+        "config": {
+          "isCustomServer": true
+        },
+        "versions": {
+          "dtlpy": "1.93.9"
+        },
+        "initInputs": [],
+        "functions": [
+          {
+            "name": "start_pipe",
+            "input": [
+              {
+                "type": "Item",
+                "name": "item"
+              }
+            ],
+            "output": [
+              {
+                "type": "Item",
+                "name": "item"
+              }
+            ],
+            "displayIcon": "icon-dl-gradio",
+            "displayName": "Gradio"
+          }
         ]
-    }
+      }
+    ],
+    "services": [
+      {
+        "name": "gradio-service",
+        "moduleName": "gradio-module",
+        "panelNames": [
+          "ingest-gradio"
+        ],
+        "runtime": {
+          "runnerImage": "gcr.io/viewo-g/piper/agent/apps/ingest-gradio:0.1.14",
+          "podType": "regular-xs",
+          "concurrency": 10,
+          "autoscaler": {
+            "minReplicas": 1,
+            "maxReplicas": 2,
+            "queueLength": 10
+          }
+        }
+      }
+    ]
+  }
 }
