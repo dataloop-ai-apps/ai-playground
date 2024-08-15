@@ -2,7 +2,7 @@
     "displayName": "Gradio Pipeline Init",
     "name": "pipeline-init-gradio",
     "scope": "project",
-    "version": "0.0.2",
+    "version": "0.0.3",
     "attributes": {
         "Provider": "Gradio",
         "deployed By": "Dataloop",
@@ -13,7 +13,7 @@
     "codebase": {
         "type": "git",
         "gitUrl": "https://github.com/dataloop-ai-apps/gradio-pipeline-init.git",
-        "gitTag": "0.0.2"
+        "gitTag": "0.0.3"
     },
     "components": {
         "panels": [
