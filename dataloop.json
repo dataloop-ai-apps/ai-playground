@@ -1,6 +1,6 @@
 {
-    "displayName": "Gradio Pipeline Init",
-    "name": "pipeline-init-gradio",
+    "displayName": "Gradio Pipeline Trigger",
+    "name": "pipeline-trigger-gradio",
     "scope": "project",
     "version": "0.0.3",
     "attributes": {
@@ -12,7 +12,7 @@
     },
     "codebase": {
         "type": "git",
-        "gitUrl": "https://github.com/dataloop-ai-apps/gradio-pipeline-init.git",
+        "gitUrl": "https://github.com/dataloop-ai-apps/pipeline-trigger-gradio",
         "gitTag": "0.0.3"
     },
     "components": {
@@ -48,7 +48,7 @@
             {
                 "invoke": {
                     "type": "function",
-                    "namespace": "pipeline-init-gradio-service.gradio-module.start_pipe"
+                    "namespace": "pipeline-trigger-gradio-service.gradio-module.start_pipe"
                 },
                 "categories": [
                     "Integrations"
@@ -116,7 +116,7 @@
         ],
         "services": [
             {
-                "name": "pipeline-init-gradio-service",
+                "name": "pipeline-trigger-gradio-service",
                 "moduleName": "gradio-module",
                 "panelNames": [
                     "gradio"
