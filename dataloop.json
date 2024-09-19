@@ -1,7 +1,7 @@
 {
   "displayName": "Gradio Pipeline Trigger",
   "name": "pipeline-trigger-gradio",
-  "scope": "project",
+  "scope": "public",
   "version": "0.0.4",
   "attributes": {
     "Provider": "Gradio",
