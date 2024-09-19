@@ -1,27 +1,14 @@
 import { v4 } from "uuid";
-
-export interface Group {
+export interface Port {
   id: string;
   name: string;
-  distribution: number;
-}
-
-export interface ItemMetadata {
-  key: string;
-  value: string;
   type: string;
 }
 
 export interface INodeConfig {
   name: string;
-  distributeEqually: boolean;
-  groups: Group[];
-  itemMetadata?: boolean;
-  overrideItemMetadata?: boolean;
   validation: ValidationDescriptor;
-  ports?: Port[];
 }
-
 /**
  * The node configuration JSON interface.
  *
@@ -29,40 +16,16 @@ export interface INodeConfig {
  * @typedef {Object} INodeConfigJSON
  * @property {string} name - The name of the node configuration.
  * @property {Object} body - The body of the node configuration.
- * @property {boolean} body.distributeEqually - Indicates whether the groups should be distributed equally.
- * @property {Group[]} body.groups - An array of groups associated with the node configuration.
- * @property {ItemMetadata} [body.itemMetadata] - The metadata associated with the node configuration.
  * @property {ValidationDescriptor} validation - The validation descriptor for the node configuration.
- * @property {Port[]} [ports] - An array of ports associated with the node configuration.
  */
 export interface INodeConfigJSON {
   name: string;
-  body: {
-    distributeEqually: boolean;
-    groups: Group[];
-    itemMetadata?: boolean;
-    overrideItemMetadata?: boolean;
-  };
+  body: {};
   validation: ValidationDescriptor;
-  ports?: Port[];
-}
-
-export interface Port {
-  name: string;
-  action: string;
-  type: string;
-  portPercentage: number;
 }
 
 const DEFAULT_VALUES = (): INodeConfig => ({
-  name: "Gradio",
-  groups: [
-    { id: v4(), name: "group_1", distribution: 50 },
-    { id: v4(), name: "group_2", distribution: 50 },
-  ],
-  distributeEqually: true,
-  itemMetadata: true,
-  overrideItemMetadata: false,
+  name: "Gradio Start",
   validation: {
     valid: true,
     errors: [],
@@ -70,7 +33,7 @@ const DEFAULT_VALUES = (): INodeConfig => ({
 });
 
 const NODE_DEFAULT_VALUES = {
-  name: "Gradio",
+  name: "Gradio Start",
   id: "",
   inputs: [],
   outputs: [],
@@ -116,11 +79,10 @@ export interface IODescriptor {
   displayName?: string;
   color?: string;
   actionIcon?: string;
-  actions?: string[];
+  action?: string;
   portPercentage?: number;
   type: string;
   defaultValue?: string | number | boolean | Dictionary | null;
-  nodeId?: string;
 }
 
 export class NodeDescriptor {
@@ -139,20 +101,7 @@ export class NodeDescriptor {
     this.name = init?.name ?? NODE_DEFAULT_VALUES.name;
     this.inputs = init?.inputs ?? NODE_DEFAULT_VALUES.inputs;
     this.metadata = init?.metadata ?? NODE_DEFAULT_VALUES.metadata;
-    this.outputs = [
-      {
-        portId: init?.outputs[0]?.portId ?? v4(),
-        actions:
-          this.metadata.customNodeConfig.groups
-            .filter((dict) => dict.name.trim() !== "")
-            .map((element) => {
-              return element.name;
-            }) ?? [],
-        name: "item",
-        nodeId: this.id,
-        type: "Item",
-      },
-    ];
+    this.outputs = init?.outputs ?? NODE_DEFAULT_VALUES.outputs;
     this.type = init?.type ?? NODE_DEFAULT_VALUES.type;
     this.projectId = init?.projectId ?? NODE_DEFAULT_VALUES.projectId;
     this.appId = init?.appId ?? NODE_DEFAULT_VALUES.appId;
@@ -176,22 +125,10 @@ export class NodeDescriptor {
 
 export class NodeConfig implements INodeConfig {
   public name: string;
-  public distributeEqually: boolean;
-  public groups: Group[];
-  public itemMetadata?: boolean;
   public validation: ValidationDescriptor;
-  public overrideItemMetadata?: boolean;
 
   constructor(init?: INodeConfig) {
     this.name = init?.name ?? NodeConfig.DefaultValues.name;
-    this.distributeEqually =
-      init?.distributeEqually ?? NodeConfig.DefaultValues.distributeEqually;
-    this.groups = init?.groups ?? NodeConfig.DefaultValues.groups;
-    this.itemMetadata =
-      init?.itemMetadata ?? NodeConfig.DefaultValues.itemMetadata;
-    this.overrideItemMetadata =
-      init?.overrideItemMetadata ??
-      NodeConfig.DefaultValues.overrideItemMetadata;
     this.validation = init?.validation ?? NodeConfig.DefaultValues.validation;
   }
 
@@ -199,37 +136,17 @@ export class NodeConfig implements INodeConfig {
     return DEFAULT_VALUES();
   }
 
-  public get ports(): Port[] {
-    return this.groups.map((group) => {
-      return {
-        action: group.name,
-        name: "item",
-        type: "Item",
-        portPercentage: group.distribution,
-      };
-    });
-  }
-
   public static fromJSON(json: Partial<NodeConfig>): INodeConfig {
     return {
       name: json?.name,
-      distributeEqually: json?.distributeEqually,
-      groups: json?.groups,
-      itemMetadata: json?.itemMetadata,
       validation: json?.validation,
-      overrideItemMetadata: json?.overrideItemMetadata,
     };
   }
 
   public toJSON() {
     return {
       name: this.name,
-      distributeEqually: this.distributeEqually,
-      groups: this.groups,
-      itemMetadata: this.itemMetadata ?? true,
-      overrideItemMetadata: this.overrideItemMetadata ?? false,
       validation: this.validation,
-      ports: this.ports,
     };
   }
 }
