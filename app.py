@@ -50,6 +50,15 @@ class GradioServer:
         Start a Gradio server to communicate and execute project's pipelines
         :param project:
         """
+        get_window_url_params = """
+        function(pipeline_input) {
+            const params = new URLSearchParams(window.location.search)
+            const pipeline = params.get('pipeline') || ''
+            console.log('pipeline:', pipeline)
+            return pipeline
+        }
+        """
+
         self.logger = logger
         self.project = project
         self.pipelines: Dict[str, dl.Pipeline] = self.list_available_pipelines()
@@ -57,12 +66,20 @@ class GradioServer:
         self.items: dict[str, dl.Item] = dict()
 
         with gr.Blocks(css=css) as blocks:
+
+            pipeline_input = gr.Textbox(label="Pipeline", elem_id="pipeline_input", visible=False)
+            blocks.load(
+                fn=lambda x: x,  # Pass the result from JS (pipeline) directly to the Gradio component
+                inputs=pipeline_input,  # We expect input from JS
+                outputs=pipeline_input,  # Output is the same pipeline value in the TextBox
+                _js=get_window_url_params  # Use the JavaScript function to fetch the 'pipeline' param
+            )
             gr.Markdown(f"Chat with project: {self.project.name}")
             with gr.Tab("Chat"):
-                with gr.Row():
-                    dropdown = gr.Dropdown(choices=list(self.pipelines.keys()), label="Pipelines List")
-                    generate_btn = gr.Button("Refresh Pipelines")
-                    generate_btn.click(fn=self.update_pipelines_dropdown, inputs=None, outputs=dropdown)
+                # with gr.Row():
+                #     dropdown = gr.Dropdown(choices=list(self.pipelines.keys()), label="Pipelines List")
+                #     generate_btn = gr.Button("Refresh Pipelines")
+                #     generate_btn.click(fn=self.update_pipelines_dropdown, inputs=None, outputs=dropdown)
                 chatbot = gr.Chatbot()
                 msg = gr.Textbox()
                 state = gr.State([])
@@ -74,7 +91,7 @@ class GradioServer:
                 msg.submit(self.update_state,
                            inputs=[msg, state],
                            outputs=[msg, state]).then(self.on_submit,
-                                                      [state, dropdown, session_id],
+                                                      [state, pipeline_input, session_id],
                                                       [state, chatbot, session_id])
 
         self.app = fastapi.FastAPI()
@@ -156,7 +173,8 @@ class GradioServer:
         # create item
         item_name = f'{session_id}.json'
         dataset_name = f'prompt-for-pipeline-{selected_pipeline}'
-        pipeline = self.pipelines[selected_pipeline]
+        # pipeline = self.pipelines[selected_pipeline]
+        pipeline: dl.Pipeline = self.project.pipelines.get(pipeline_name=selected_pipeline)
         if dataset_name in self.datasets:
             dataset = self.datasets[dataset_name]
         else:
@@ -299,6 +317,14 @@ class GradioServer:
         # Format the messages for display in the Gradio chatbot
         chat_display = [[u, a] for u, a in zip(users, assis)]
         yield history, chat_display, session_id
+        pipeline = self.project.pipelines.get(pipeline_name=selected_pipeline)
+        if pipeline.status != 'Installed':
+            msg = f"Pipeline '{selected_pipeline}' is not installed. Please install it first."
+            history[-1]["content"] = msg
+            chat_display[-1][1] = msg
+            yield history, chat_display, session_id
+
+            return history, chat_display, session_id
 
         for resp in self.execute_and_stream(history=history[:-1],  # send to pipeline without the empty response
                                             selected_pipeline=selected_pipeline,
@@ -319,7 +345,12 @@ class GradioServer:
                     )
 
 
+def create_app():
+    dl.setenv('rc')
+    runner = GradioRunner(context={"project": dl.projects.get(project_id="")})
+    return runner.server.app_gradio
+
+
 if __name__ == "__main__":
-    dl.setenv('prod')
-    runner = GradioRunner(context={"project": dl.projects.get('')})
-    runner.thread.join()
+    app = create_app()  # Initialize the app once
+    uvicorn.run("app:create_app", host="0.0.0.0", port=3004, reload=True)

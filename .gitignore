@@ -133,6 +133,7 @@ __pycache__/
 
 # Distribution / packaging
 .Python
+node_modules/
 build/
 develop-eggs/
 dist/
@@ -150,6 +151,7 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+*.ipynb
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
