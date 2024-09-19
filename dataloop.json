@@ -59,7 +59,7 @@
       {
         "invoke": {
           "type": "function",
-          "namespace": "gradio-service.gradio_module.start_pipe"
+          "namespace": "gradio-service.gradio-module.start_pipe"
         },
         "categories": ["Integrations"],
         "panel": "gradconfig",
@@ -71,7 +71,7 @@
     ],
     "modules": [
       {
-        "name": "gradio_module",
+        "name": "gradio-module",
         "entryPoint": "app.py",
         "className": "GradioRunner",
         "config": {
@@ -105,7 +105,7 @@
     "services": [
       {
         "name": "gradio-service",
-        "moduleName": "gradio_module",
+        "moduleName": "gradio-module",
         "panelNames": ["gradio"],
         "runtime": {
           "runnerImage": "gcr.io/viewo-g/piper/agent/apps/ingest-gradio:0.1.14",
