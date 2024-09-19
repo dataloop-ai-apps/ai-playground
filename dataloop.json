@@ -63,7 +63,7 @@
         },
         "categories": ["Integrations"],
         "panel": "gradconfig",
-        "name": "gradconfig",
+        "name": "Gradio Start",
         "displayName": "Gradio Start",
         "description": "Gradio Start",
         "scope": "node"
