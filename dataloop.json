@@ -77,9 +77,6 @@
         "config": {
           "isCustomServer": true
         },
-        "versions": {
-          "dtlpy": "1.93.9"
-        },
         "initInputs": [],
         "functions": [
           {
