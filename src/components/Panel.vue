@@ -120,6 +120,7 @@ const debouncedUpdate = debounce(async () => {
         portId: component.value.outputs[0].portId ?? v4(),
         name: "item",
         type: "Item",
+        nodeId: component.value.id,
       },
     ];
     await window.dl.agent.sendEvent({
