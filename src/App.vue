@@ -21,7 +21,7 @@ onMounted(() => {
           eventPayload.metadata.customNodeConfig = NodeConfig.DefaultValues;
         }
         component.value = new NodeDescriptor(
-          NodeDescriptor.fromJSON(eventPayload)ß
+          NodeDescriptor.fromJSON(eventPayload)
         );
         console.log(component.value.outputs);
         console.log("Node Config Event", NodeDescriptor.fromJSON(eventPayload));
