@@ -82,6 +82,7 @@ export interface IODescriptor {
   action?: string;
   portPercentage?: number;
   type: string;
+  nodeId?: string;
   defaultValue?: string | number | boolean | Dictionary | null;
 }
 
