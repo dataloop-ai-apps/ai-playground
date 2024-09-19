@@ -21,8 +21,9 @@ onMounted(() => {
           eventPayload.metadata.customNodeConfig = NodeConfig.DefaultValues;
         }
         component.value = new NodeDescriptor(
-          NodeDescriptor.fromJSON(eventPayload)
+          NodeDescriptor.fromJSON(eventPayload)ß
         );
+        console.log(component.value.outputs
         console.log("Node Config Event", NodeDescriptor.fromJSON(eventPayload));
         addItemMetadata.value =
           component.value?.metadata?.customNodeConfig?.itemMetadata ?? true;
