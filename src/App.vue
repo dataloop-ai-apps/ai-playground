@@ -23,8 +23,6 @@ onMounted(() => {
         component.value = new NodeDescriptor(
           NodeDescriptor.fromJSON(eventPayload)
         );
-        console.log(component.value.outputs);
-        console.log("Node Config Event", NodeDescriptor.fromJSON(eventPayload));
         addItemMetadata.value =
           component.value?.metadata?.customNodeConfig?.itemMetadata ?? true;
         overrideItemMetadata.value =
