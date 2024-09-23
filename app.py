@@ -319,7 +319,7 @@ class GradioServer:
         yield history, chat_display, session_id
         pipeline = self.project.pipelines.get(pipeline_name=selected_pipeline)
         if pipeline.status != 'Installed':
-            msg = f"Pipeline '{selected_pipeline}' is not installed. Please install it first."
+            msg = f"Pipeline '{selected_pipeline}' is not running. Click 'Start Pipeline' to get started."
             history[-1]["content"] = msg
             chat_display[-1][1] = msg
             yield history, chat_display, session_id
