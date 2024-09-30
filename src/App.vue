@@ -45,12 +45,7 @@ onMounted(() => {
         throw new Error("Error getting settings", e);
       }
       const pipeline = await window.dl.pipelines.get();
-      appUrl.value =
-        getUrlBeforePipeline((pipeline as any).url) +
-        "/apps/" +
-        getModifiedUrl(window.location.href) +
-        "/panels/gradio/?pipeline=" +
-        pipeline.name;
+      appUrl.value = window.location.href.replace("/gradconfig", "/gradio");
 
       window.dl.on(DlEvent.THEME, (mode: string) => {
         theme.value = mode;

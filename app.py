@@ -10,6 +10,8 @@ import gradio as gr
 import dtlpy as dl
 import numpy as np
 
+from fastapi.staticfiles import StaticFiles
+
 from typing import Dict
 
 logger = logging.getLogger('[GRADIO]')
@@ -76,10 +78,6 @@ class GradioServer:
             )
             gr.Markdown(f"Chat with project: {self.project.name}")
             with gr.Tab("Chat"):
-                # with gr.Row():
-                #     dropdown = gr.Dropdown(choices=list(self.pipelines.keys()), label="Pipelines List")
-                #     generate_btn = gr.Button("Refresh Pipelines")
-                #     generate_btn.click(fn=self.update_pipelines_dropdown, inputs=None, outputs=dropdown)
                 chatbot = gr.Chatbot()
                 msg = gr.Textbox()
                 state = gr.State([])
@@ -100,6 +98,7 @@ class GradioServer:
         self.app_gradio = gr.mount_gradio_app(app=self.app,
                                               blocks=blocks,
                                               path='/gradio')
+        self.app.mount("/gradconfig", StaticFiles(directory="panels/gradconfig", html=True), name='gradconfig')
 
     def list_available_pipelines(self):
         """

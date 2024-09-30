@@ -103,7 +103,7 @@
       {
         "name": "gradio-service",
         "moduleName": "gradio_module",
-        "panelNames": ["gradio"],
+        "panelNames": ["gradio", "gradconfig"],
         "runtime": {
           "runnerImage": "gcr.io/viewo-g/piper/agent/apps/ingest-gradio:0.1.14",
           "podType": "regular-xs",
@@ -114,29 +114,6 @@
             "queueLength": 10
           }
         }
-      },
-      {
-        "name": "gradio-service-nodes",
-        "panelNames": ["gradconfig"],
-        "runtime": {
-          "podType": "regular-xs",
-          "runnerImage": "gcr.io/viewo-g/piper/agent/runner/cpu/node14:latest",
-          "numReplicas": 1,
-          "concurrency": 10,
-          "singleAgent": false,
-          "autoscaler": {
-            "type": "rabbitmq",
-            "minReplicas": 1,
-            "maxReplicas": 2,
-            "queueLength": 10
-          },
-          "preemptible": false
-        },
-        "executionTimeout": 172800,
-        "drainTime": 600,
-        "onReset": "failed",
-        "runExecutionAsProcess": false,
-        "maxAttempts": 3
       }
     ]
   }
