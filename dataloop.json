@@ -121,7 +121,8 @@
             "threshold": 30,
             "rateSeconds": 30,
             "minReplicas": 0,
-            "maxReplicas": 2
+            "maxReplicas": 2,
+            "queueLength": 10
           }
         }
       }
