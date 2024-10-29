@@ -70,7 +70,7 @@
         "name": "Gradio Start",
         "displayName": "Gradio Start",
         "description": "Gradio Start",
-        "scope": "node"
+        "scope": "project"
       }
     ],
     "modules": [
@@ -117,7 +117,7 @@
           "concurrency": 10,
           "autoscaler": {
             "type": "rps",
-            "cooldownPeriod": 1800,
+            "cooldownPeriod": 60,
             "threshold": 30,
             "rateSeconds": 30,
             "minReplicas": 0,
