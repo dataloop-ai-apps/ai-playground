@@ -118,10 +118,10 @@
           "autoscaler": {
             "type": "rps",
             "cooldownPeriod": 60,
-            "threshold": 30,
+            "threshold": 10,
             "rateSeconds": 30,
             "minReplicas": 0,
-            "maxReplicas": 2,
+            "maxReplicas": 1,
             "queueLength": 10
           }
         }
