@@ -33,7 +33,9 @@
                   "y": 55
                 }
               },
-              "routes": ["modelOverview"]
+              "routes": [
+                "modelOverview"
+              ]
             }
           }
         ],
@@ -61,7 +63,9 @@
           "type": "function",
           "namespace": "gradio-service.gradio_module.start_pipe"
         },
-        "categories": ["Integrations"],
+        "categories": [
+          "Integrations"
+        ],
         "panel": "gradconfig",
         "name": "Gradio Start",
         "displayName": "Gradio Start",
@@ -103,15 +107,21 @@
       {
         "name": "gradio-service",
         "moduleName": "gradio_module",
-        "panelNames": ["gradio", "gradconfig"],
+        "panelNames": [
+          "gradio",
+          "gradconfig"
+        ],
         "runtime": {
           "runnerImage": "gcr.io/viewo-g/piper/agent/apps/ingest-gradio:0.1.14",
           "podType": "regular-xs",
           "concurrency": 10,
           "autoscaler": {
-            "minReplicas": 1,
-            "maxReplicas": 2,
-            "queueLength": 10
+            "type": "rps",
+            "cooldownPeriod": 1800,
+            "threshold": 30,
+            "rateSeconds": 30,
+            "minReplicas": 0,
+            "maxReplicas": 2
           }
         }
       }
