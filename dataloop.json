@@ -117,8 +117,8 @@
           "concurrency": 10,
           "autoscaler": {
             "type": "rps",
-            "cooldownPeriod": 60,
-            "threshold": 10,
+            "cooldownPeriod": 1800,
+            "threshold": 1,
             "rateSeconds": 30,
             "minReplicas": 0,
             "maxReplicas": 1,
