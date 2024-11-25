@@ -98,7 +98,7 @@ class GradioServer:
         blocks.queue()
         blocks.enable_queue = True
         self.app_gradio = gr.mount_gradio_app(
-            app=self.app, blocks=blocks, path='/gradio'
+            app=self.app, blocks=blocks, path='/gradio', root_path='/gradio'
         )
         self.app.mount(
             "/gradconfig",
