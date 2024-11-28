@@ -106,8 +106,8 @@
         "botUserName": "tab-apps@dataloop.ai",
         "panelNames": ["gradio", "gradconfig"],
         "runtime": {
-          "runnerImage": "gcr.io/viewo-g/piper/agent/apps/ingest-gradio:0.1.15",
-          "podType": "regular-xs",
+          "runnerImage": "gcr.io/viewo-g/piper/agent/cpu/ingest-gradio:0.1.15",
+          "podType": "regular-m",
           "concurrency": 10,
           "autoscaler": {
             "type": "rps",

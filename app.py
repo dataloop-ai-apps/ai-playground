@@ -251,7 +251,7 @@ class GradioServer:
                 assistant_messages = [
                     message for message in messages if message["role"] == "assistant"
                 ]
-                if len(assistant_messages) == 0:
+                if len(assistant_messages) == 0 or len(messages) + 1 <= len(history):
                     # still nothing from the model
                     continue
                 last_content = assistant_messages[-1]["content"]
@@ -310,6 +310,8 @@ class GradioServer:
 
         if session_id is None:
             session_id = str(uuid.uuid4())
+
+        yield history, history, session_id
 
         if selected_pipeline is None:
             yield history, [
