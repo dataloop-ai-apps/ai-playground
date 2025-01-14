@@ -55,7 +55,7 @@ onMounted(() => {
       appUrl.value =
         window.location.href.replace("/gradconfig", "/gradio") +
         "?pipeline=" +
-        pipeline.name;
+        pipeline.id;
 
       window.dl.on(DlEvent.THEME, (mode: string) => {
         theme.value = mode;
