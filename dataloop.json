@@ -2,7 +2,7 @@
     "displayName": "AI Chat Pipeline Trigger",
     "name": "pipeline-trigger-ai-chat",
     "scope": "public",
-    "version": "0.0.19",
+    "version": "0.0.20",
     "attributes": {
         "Provider": "Dataloop",
         "deployed By": "Dataloop",
@@ -13,7 +13,7 @@
     "codebase": {
         "type": "git",
         "gitUrl": "https://github.com/dataloop-ai-apps/pipeline-trigger-gradio",
-        "gitTag": "0.0.19"
+        "gitTag": "0.0.20"
     },
     "components": {
         "panels": [
