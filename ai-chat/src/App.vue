@@ -13,7 +13,8 @@
                         <dl-icon
                             v-if="message.sender === 'bot'"
                             class="massage-item"
-                            icon="icon-dl-dataloop"
+                            icon="dataloop-logo"
+                            :svgSource="'assets'"
                             size="l"
                             :svg="true"
                         ></dl-icon>
