@@ -1,125 +1,125 @@
 {
-  "displayName": "Gradio Pipeline Trigger",
-  "name": "pipeline-trigger-gradio",
-  "scope": "public",
-  "version": "0.0.18",
-  "attributes": {
-    "Provider": "Gradio",
-    "deployed By": "Dataloop",
-    "Category": "Application",
-    "Application Type": "Pipeline Node",
-    "Node Type": "Integration"
-  },
-  "codebase": {
-    "type": "git",
-    "gitUrl": "https://github.com/dataloop-ai-apps/pipeline-trigger-gradio",
-    "gitTag": "0.0.18"
-  },
-  "components": {
-    "panels": [
-      {
-        "name": "gradio",
-        "supportedSlots": [
-          {
-            "type": "floatingWindow",
-            "configuration": {
-              "layout": {
-                "width": 455,
-                "height": 340,
-                "resizable": true,
-                "backgroundColor": "dl-color-studio-panel",
-                "position": {
-                  "x": 775,
-                  "y": 55
+    "displayName": "AI Chat Pipeline Trigger",
+    "name": "pipeline-trigger-ai-chat",
+    "scope": "public",
+    "version": "0.0.18",
+    "attributes": {
+        "Provider": "Dataloop",
+        "deployed By": "Dataloop",
+        "Category": "Application",
+        "Application Type": "Pipeline Node",
+        "Node Type": "Integration"
+    },
+    "codebase": {
+        "type": "git",
+        "gitUrl": "https://github.com/dataloop-ai-apps/pipeline-trigger-gradio",
+        "gitTag": "0.0.18"
+    },
+    "components": {
+        "panels": [
+            {
+                "name": "ai",
+                "supportedSlots": [
+                    {
+                        "type": "floatingWindow",
+                        "configuration": {
+                            "layout": {
+                                "width": 455,
+                                "height": 340,
+                                "resizable": true,
+                                "backgroundColor": "dl-color-studio-panel",
+                                "position": {
+                                    "x": 775,
+                                    "y": 55
+                                }
+                            },
+                            "routes": ["modelOverview"]
+                        }
+                    }
+                ],
+                "conditions": {
+                    "resources": []
                 }
-              },
-              "routes": ["modelOverview"]
+            },
+            {
+                "name": "gradconfig",
+                "icon": "icon-dl-qa-sampling",
+                "supportedSlots": [
+                    {
+                        "type": "pipelineNodeConfig",
+                        "configuration": {}
+                    }
+                ],
+                "conditions": {
+                    "resources": []
+                }
             }
-          }
         ],
-        "conditions": {
-          "resources": []
-        }
-      },
-      {
-        "name": "gradconfig",
-        "icon": "icon-dl-qa-sampling",
-        "supportedSlots": [
-          {
-            "type": "pipelineNodeConfig",
-            "configuration": {}
-          }
+        "pipelineNodes": [
+            {
+                "invoke": {
+                    "type": "function",
+                    "namespace": "ai-chat-service.ai_chat_module.start_pipe"
+                },
+                "categories": ["Integrations"],
+                "panel": "gradconfig",
+                "name": "AI Chat Start",
+                "displayName": "AI Chat Start",
+                "description": "AI Chat Start",
+                "scope": "project"
+            }
         ],
-        "conditions": {
-          "resources": []
-        }
-      }
-    ],
-    "pipelineNodes": [
-      {
-        "invoke": {
-          "type": "function",
-          "namespace": "gradio-service.gradio_module.start_pipe"
-        },
-        "categories": ["Integrations"],
-        "panel": "gradconfig",
-        "name": "Gradio Start",
-        "displayName": "Gradio Start",
-        "description": "Gradio Start",
-        "scope": "project"
-      }
-    ],
-    "modules": [
-      {
-        "name": "gradio_module",
-        "entryPoint": "app.py",
-        "className": "GradioRunner",
-        "config": {
-          "isCustomServer": true
-        },
-        "initInputs": [],
-        "functions": [
-          {
-            "name": "start_pipe",
-            "input": [
-              {
-                "type": "Item",
-                "name": "item"
-              }
-            ],
-            "output": [
-              {
-                "type": "Item",
-                "name": "item"
-              }
-            ],
-            "displayIcon": "icon-dl-gradio",
-            "displayName": "Gradio"
-          }
+        "modules": [
+            {
+                "name": "ai_chat_module",
+                "entryPoint": "main.py",
+                "className": "Runner",
+                "config": {
+                    "isCustomServer": true
+                },
+                "initInputs": [],
+                "functions": [
+                    {
+                        "name": "start_pipe",
+                        "input": [
+                            {
+                                "type": "Item",
+                                "name": "item"
+                            }
+                        ],
+                        "output": [
+                            {
+                                "type": "Item",
+                                "name": "item"
+                            }
+                        ],
+                        "displayIcon": "icon-dl-dataloop",
+                        "displayName": "AI Chat"
+                    }
+                ]
+            }
+        ],
+        "services": [
+            {
+                "name": "ai-chat-service",
+                "moduleName": "ai_chat_module",
+                "botUserName": "tab-apps@dataloop.ai",
+                "panelNames": ["ai", "gradconfig"],
+                "runtime": {
+                    "runnerImage": "gcr.io/viewo-g/piper/agent/cpu/ingest-gradio:0.1.15",
+                    "podType": "regular-m",
+                    "concurrency": 10,
+                    "autoscaler": {
+                        "type": "rps",
+                        "cooldownPeriod": 1800,
+                        "threshold": 1,
+                        "rateSeconds": 30,
+                        "minReplicas": 1,
+                        "maxReplicas": 1,
+                        "queueLength": 10
+                    }
+                }
+            }
         ]
-      }
-    ],
-    "services": [
-      {
-        "name": "gradio-service",
-        "moduleName": "gradio_module",
-        "botUserName": "tab-apps@dataloop.ai",
-        "panelNames": ["gradio", "gradconfig"],
-        "runtime": {
-          "runnerImage": "gcr.io/viewo-g/piper/agent/cpu/ingest-gradio:0.1.15",
-          "podType": "regular-m",
-          "concurrency": 10,
-          "autoscaler": {
-            "type": "rps",
-            "cooldownPeriod": 1800,
-            "threshold": 1,
-            "rateSeconds": 30,
-            "minReplicas": 1,
-            "maxReplicas": 1,
-            "queueLength": 10
-          }
-        }
-      }
-    ]
-  }
+    }
 }
