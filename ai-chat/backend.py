@@ -1,7 +1,7 @@
-from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 import json  # Import json for JSON formatting
 import logging
+import uuid
 import time
 import traceback
 import dtlpy as dl
@@ -11,12 +11,27 @@ import os
 import asyncio  # Add asyncio import
 from functools import partial
 from concurrent.futures import ThreadPoolExecutor
+import uvicorn
+from typing import Optional
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
 current_dir = os.path.dirname(os.path.abspath(__file__))
 thread_pool = ThreadPoolExecutor(max_workers=10)  # Adjust max_workers as needed
 
 app = FastAPI()
+
+# Add this after creating the FastAPI app
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, replace with your frontend domain
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 def get_last_pipeline_node(pipeline: dl.Pipeline):
@@ -33,7 +48,7 @@ async def run_in_threadpool(func, *args, **kwargs):
     return await loop.run_in_executor(thread_pool, partial(func, *args, **kwargs))
 
 
-async def execute_and_stream(question, selected_pipeline, session_id, messages_count):
+async def execute_and_stream(question, selected_pipeline, session_id, item_id):
     """
     Execute the pipeline and wait for the last execution to finish.
     After the last execution start - this function will start streaming (using yield) the response.
@@ -41,13 +56,11 @@ async def execute_and_stream(question, selected_pipeline, session_id, messages_c
     :param question:
     :param selected_pipeline:
     :param session_id:
-    :param messages_count:
+    :param item_id:
     :return:
     """
 
-    messages_count = int(messages_count)
     logger.info(f"incoming question: {question}")
-    item_name = f"{session_id}.json"
     dataset_name = f"prompt-for-pipeline-{selected_pipeline}"
 
     # Run blocking pipeline get operation in thread pool
@@ -62,21 +75,9 @@ async def execute_and_stream(question, selected_pipeline, session_id, messages_c
     except dl.exceptions.NotFound:
         dataset = await run_in_threadpool(pipeline.project.datasets.create, dataset_name=dataset_name)
 
-    try:
-        # Run blocking item operations in thread pool
-        item = await run_in_threadpool(dataset.items.get, filepath=f"/{item_name}")
-    except dl.exceptions.NotFound:
-        prompt_item = dl.PromptItem(name=item_name)
-        item = await run_in_threadpool(
-            dataset.items.upload,
-            local_path=prompt_item,
-            overwrite=True,
-            item_metadata={"prompt": {v.name: v.value for v in pipeline.variables}},
-        )
+    item = await run_in_threadpool(dataset.items.get, item_id=item_id)
 
     prompt_item = dl.PromptItem.from_item(item=item)
-    prompt_item.add(message={"role": "user", "content": [{"mimetype": dl.PromptType.TEXT, "value": question}]})
-    logger.info(f"Using prompt item id: {item.id}")
 
     # Run blocking pipeline execute in thread pool
     pipeline_ex = await run_in_threadpool(pipeline.execute, execution_input={"item": item.id})
@@ -142,14 +143,24 @@ async def execute_and_stream(question, selected_pipeline, session_id, messages_c
             logger.info(f"Streaming:  execution status: {ex.status_log[-1].get('status', '')}")
             if ex.status_log[-1].get("status", "") == "created":
                 await asyncio.sleep(0.5)  # Non-blocking sleep
+                print("caka 1")
                 continue
 
             # Run blocking prompt item fetch in thread pool
             await run_in_threadpool(prompt_item.fetch)
-            messages = prompt_item.to_messages(model_name=last_execution_model_name)
+            messages = prompt_item.to_messages()
             assistant_messages = [message for message in messages if message["role"] == "assistant"]
-            if len(assistant_messages) == 0 or len(messages) < messages_count:
+
+            if (
+                not prompt_item.assistant_prompts
+                or prompt_item.assistant_prompts[-1].key != prompt_item.prompts[-1].key
+            ):
                 await asyncio.sleep(0.5)  # Non-blocking sleep
+                try:
+                    print(prompt_item.assistant_prompts[-1].key)
+                    print(prompt_item.prompts[-1].key)
+                except:
+                    print("no assistant prompts")
                 continue
 
             last_content = assistant_messages[-1]["content"]
@@ -171,6 +182,7 @@ async def execute_and_stream(question, selected_pipeline, session_id, messages_c
                 yield data
             else:
                 await asyncio.sleep(0.1)  # Non-blocking sleep
+                print("caka 3")
                 continue
 
             if ex.status_log[-1].get("status", "") == "success":
@@ -197,12 +209,79 @@ async def execute_and_stream(question, selected_pipeline, session_id, messages_c
             yield data
 
 
+@app.post("/start-stream")
+async def start_stream(
+    session_id: str = Form(...),
+    message: str = Form(...),
+    pipeline_id: str = Form(...),
+    file: Optional[UploadFile] = File(None),
+):
+    try:
+        logger.debug("Received request with file: %s", file.filename if file else None)
+        pipeline: dl.Pipeline = await run_in_threadpool(dl.pipelines.get, pipeline_id=pipeline_id)
+        dataset_name = f"prompt-for-pipeline-{pipeline_id}"
+        item_name = f"{session_id}.json"
+        print(dataset_name)
+        try:
+            dataset = await run_in_threadpool(pipeline.project.datasets.get, dataset_name=dataset_name)
+        except dl.exceptions.NotFound:
+            dataset = await run_in_threadpool(pipeline.project.datasets.create, dataset_name=dataset_name)
+
+        image_item = None
+        # Add file size check
+        if file:
+            file_bytes = await file.read()
+            # Read file content into memory (with size limit)
+            image_item = await run_in_threadpool(
+                dataset.items.upload, local_path=file_bytes, overwrite=True, remote_name=f"files/{file.filename}"
+            )
+            MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB limit
+            if len(file_bytes) > MAX_FILE_SIZE:
+                raise HTTPException(status_code=400, detail="File size too large")
+
+        try:
+            # Run blocking item operations in thread pool
+            item = await run_in_threadpool(dataset.items.get, filepath=f"/{item_name}")
+        except dl.exceptions.NotFound:
+            prompt_item = dl.PromptItem(name=item_name)
+            item = await run_in_threadpool(
+                dataset.items.upload,
+                local_path=prompt_item,
+                overwrite=True,
+                item_metadata={"prompt": {v.name: v.value for v in pipeline.variables}},
+            )
+
+        prompt_item = dl.PromptItem.from_item(item=item)
+        # generate random key
+        prompt_key = str(len(prompt_item.prompts) + 1)
+        prompt = dl.Prompt(key=prompt_key)
+        prompt.add_element(value=message, mimetype=dl.PromptType.TEXT)
+        if image_item:
+            prompt.add_element(value=image_item.stream, mimetype=dl.PromptType.IMAGE)
+        prompt_item.prompts.append(prompt)
+
+        prompt_item._item._Item__update_item_binary(_json=prompt_item.to_json())
+
+        return {
+            "session_id": session_id,
+            "message": message,
+            "pipeline_id": pipeline_id,
+            "file_name": file.filename if file else None,
+            "item_id": item.id,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Detailed error in start-stream:")  # This will log the full traceback
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/stream")
-async def stream_response(session_id: str, question: str, pipeline_id: str, messages_count: str):
+async def stream_response(session_id: str, question: str, pipeline_id: str, item_id: str):
     async def response_generator():
         try:
             # Use the execute_and_stream function
-            async for data in execute_and_stream(question, pipeline_id, session_id, messages_count):
+            async for data in execute_and_stream(question, pipeline_id, session_id, item_id):
                 yield f"data: {json.dumps(data)}\n\n"
 
             # Send completion marker
@@ -222,3 +301,8 @@ async def stream_response(session_id: str, question: str, pipeline_id: str, mess
 app.mount("/ai", StaticFiles(directory=current_dir + "/panels/ai", html=True), name="ai")
 gradconfig_dir = os.path.join(current_dir, "..", "panels/gradconfig")
 app.mount("/gradconfig", StaticFiles(directory=gradconfig_dir, html=True), name="gradconfig")
+
+
+if __name__ == "__main__":
+    dl.setenv("rc")
+    uvicorn.run("backend:app", host="0.0.0.0", port=5463, timeout_keep_alive=60, reload=True)
