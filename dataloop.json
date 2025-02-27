@@ -2,7 +2,7 @@
     "displayName": "AI Playground",
     "name": "ai-playground",
     "scope": "public",
-    "version": "0.0.21",
+    "version": "0.0.22",
     "attributes": {
         "Provider": "Dataloop",
         "deployed By": "Dataloop",
@@ -13,7 +13,7 @@
     "codebase": {
         "type": "git",
         "gitUrl": "https://github.com/dataloop-ai-apps/ai-playground",
-        "gitTag": "0.0.21"
+        "gitTag": "0.0.22"
     },
     "components": {
         "panels": [
