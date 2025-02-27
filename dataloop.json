@@ -1,6 +1,6 @@
 {
-    "displayName": "AI Chat Pipeline Trigger",
-    "name": "pipeline-trigger-ai-chat",
+    "displayName": "AI Playground",
+    "name": "ai-playground",
     "scope": "public",
     "version": "0.0.21",
     "attributes": {
@@ -12,7 +12,7 @@
     },
     "codebase": {
         "type": "git",
-        "gitUrl": "https://github.com/dataloop-ai-apps/pipeline-trigger-gradio",
+        "gitUrl": "https://github.com/dataloop-ai-apps/ai-playground",
         "gitTag": "0.0.21"
     },
     "components": {
@@ -21,52 +21,12 @@
                 "name": "ai",
                 "supportedSlots": [
                     {
-                        "type": "floatingWindow",
-                        "configuration": {
-                            "layout": {
-                                "width": 455,
-                                "height": 340,
-                                "resizable": true,
-                                "backgroundColor": "dl-color-studio-panel",
-                                "position": {
-                                    "x": 775,
-                                    "y": 55
-                                }
-                            },
-                            "routes": ["modelOverview"]
-                        }
+                        "type": "aiPlayground"
                     }
                 ],
                 "conditions": {
                     "resources": []
                 }
-            },
-            {
-                "name": "gradconfig",
-                "icon": "icon-dl-qa-sampling",
-                "supportedSlots": [
-                    {
-                        "type": "pipelineNodeConfig",
-                        "configuration": {}
-                    }
-                ],
-                "conditions": {
-                    "resources": []
-                }
-            }
-        ],
-        "pipelineNodes": [
-            {
-                "invoke": {
-                    "type": "function",
-                    "namespace": "ai-chat-service.ai_chat_module.start_pipe"
-                },
-                "categories": ["Integrations"],
-                "panel": "gradconfig",
-                "name": "AI Chat Start",
-                "displayName": "AI Chat Start",
-                "description": "AI Chat Start",
-                "scope": "project"
             }
         ],
         "modules": [
@@ -80,19 +40,9 @@
                 "initInputs": [],
                 "functions": [
                     {
-                        "name": "start_pipe",
-                        "input": [
-                            {
-                                "type": "Item",
-                                "name": "item"
-                            }
-                        ],
-                        "output": [
-                            {
-                                "type": "Item",
-                                "name": "item"
-                            }
-                        ],
+                        "name": "run",
+                        "input": [],
+                        "output": [],
                         "displayIcon": "icon-dl-dataloop",
                         "displayName": "AI Chat"
                     }
@@ -104,7 +54,7 @@
                 "name": "ai-chat-service",
                 "moduleName": "ai_chat_module",
                 "botUserName": "tab-apps@dataloop.ai",
-                "panelNames": ["ai", "gradconfig"],
+                "panelNames": ["ai"],
                 "runtime": {
                     "runnerImage": "gcr.io/viewo-g/piper/agent/cpu/ingest-gradio:0.1.15",
                     "podType": "regular-m",
