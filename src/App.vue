@@ -75,7 +75,7 @@
             <!-- Second Div: Adjusts to the height of its content -->
             <div class="second-div">
                 <dl-alert v-if="showAlert" type="warning" class="chat-alert" :fluid="true">
-                    Please select a <strong>{{ choosed_option }}</strong> before sending a message.
+                    Please select a <strong>{{ choosed_option }}</strong> from the dropdown.
                 </dl-alert>
                 <div class="textarea-wrapper">
                     <!-- Image Preview -->
