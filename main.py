@@ -1,35 +1,57 @@
-import dtlpy as dl
-import uvicorn
+import subprocess
+import select
 import logging
-import threading
+import os
+from threading import Thread
 
-port = 3000
-
-logger = logging.getLogger("[AI-CHAT]")
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger('[AI Playground]')
 
 
-class Runner(dl.BaseServiceRunner):
+class Runner:
     def __init__(self):
-        self.server_thread = threading.Thread(target=self.start_server, daemon=True)
-        self.server_thread.start()
+        logger.info('Runner init')
 
-    def start_server(self):
-        """Starts Uvicorn server in a separate thread."""
-        logger.info("Starting Uvicorn server...")
-        uvicorn.run(
-            "backend:app",
-            host="0.0.0.0",
-            port=port,
-            timeout_keep_alive=60,
-            h11_max_incomplete_event_size=256 * 1024,
-            workers=4,
+        self.uvicorn_cmd = 'uvicorn backend:app --host 0.0.0.0 --port 3000 --timeout-keep-alive 60 --h11-max-incomplete-event-size 262144 --workers 4'
+
+        # Start subprocesses
+        self.uvicorn_process = subprocess.Popen(
+            self.uvicorn_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1
         )
 
+        logger.info('stream logs')
+        thread = Thread(target=self.stream_logs)
+        thread.daemon = True
+        thread.start()
+        logger.info('stream logs finished')
+
+    def stream_logs(self):
+        """Stream stdout and stderr of all subprocesses using select for non-blocking reading."""
+        streams = {self.uvicorn_process.stdout: "uvicorn stdout", self.uvicorn_process.stderr: "uvicorn stderr"}
+
+        try:
+            while streams:
+                readable, _, _ = select.select(streams.keys(), [], [], 0.1)
+                for stream in readable:
+                    line = stream.readline()
+                    if line:
+                        logger.info(f"{streams[stream]}: {line.strip()}")
+                    else:
+                        # When EOF is reached, remove it from the dictionary
+                        del streams[stream]
+
+                # Check if processes have terminated and their streams are empty
+                if not streams:
+                    break
+
+        finally:
+            for stream in streams:
+                stream.close()
+
     def run(self):
-        """Runs the main process logic."""
-        logger.info("Runner run started")
+        logger.info('runner run')
 
 
 if __name__ == "__main__":
-    Runner()
+    runner = Runner()
+    runner.run()
