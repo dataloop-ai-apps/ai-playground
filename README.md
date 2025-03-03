@@ -72,7 +72,7 @@ python backend.py
 
 ## Usage
 
--   Open the frontend application in your browser.
--   Select either an AI model or pipeline from the dropdown menu.
--   Type your message, optionally attach an image, and send it.
--   View real-time AI-generated responses in the chat interface.
+-   Choose AI playground from the Menu
+    ![Menu](assets/dropdown.png)
+-   Choose Pipeline or Model and start to type in chat
+    ![UI](assets/app.png)
