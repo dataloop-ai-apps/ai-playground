@@ -53,8 +53,9 @@ class Handler:
         return await loop.run_in_executor(thread_pool, partial(func, *args, **kwargs))
 
     async def ensure_dataset(self):
-        dataset = await self.run_in_threadpool(self.project.datasets.get, dataset_name=self.dataset_name)
-        if dataset.id is None:
+        try:
+            dataset = await self.run_in_threadpool(self.project.datasets.get, dataset_name=self.dataset_name)
+        except dl.exceptions.NotFound:
             dataset = await self.run_in_threadpool(self.project.datasets.create, dataset_name=self.dataset_name)
         return dataset
 
