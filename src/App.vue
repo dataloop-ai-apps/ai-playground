@@ -337,7 +337,7 @@ const sendMessage = async () => {
 
         if (!response.ok) {
             const errorData = await response.json()
-            throw new Error(errorData.detail || errorData.error || 'Failed to upload file')
+            throw new Error(errorData.detail || errorData.error || 'Failed to upload the file')
         }
 
         // const { session_id_response } = await response.json()
