@@ -337,7 +337,7 @@ const sendMessage = async () => {
 
         if (!response.ok) {
             const errorData = await response.json()
-            throw new Error(errorData.detail || errorData.error || 'Failed to upload the file')
+            throw new Error(errorData.detail || errorData.error || 'Failed to create Prompt')
         }
 
         // const { session_id_response } = await response.json()
