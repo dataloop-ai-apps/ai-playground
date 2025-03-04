@@ -194259,7 +194259,7 @@ https://github.com/highlightjs/highlight.js/issues/2277`
             }
         }),
         d9e = Gn(u9e, [['__scopeId', 'data-v-d5ecdc80']]),
-        DB = (t) => (Lp('data-v-498fb341'), (t = t()), Pp(), t),
+        DB = (t) => (Lp('data-v-27f5b5cf'), (t = t()), Pp(), t),
         p9e = { key: 0, class: 'loading-spinner' },
         f9e = { key: 1, class: 'chat-container' },
         _9e = { class: 'top-bar' },
@@ -194386,7 +194386,7 @@ https://github.com/highlightjs/highlight.js/issues/2277`
                             })
                             if (!V.ok) {
                                 const z = await V.json()
-                                throw new Error(z.detail || z.error || 'Failed to upload the file')
+                                throw new Error(z.detail || z.error || 'Failed to create Prompt')
                             }
                             const K = await V.json(),
                                 j = new URLSearchParams({
@@ -194791,7 +194791,7 @@ https://github.com/highlightjs/highlight.js/issues/2277`
                 )
             }
         }),
-        x9e = Gn(w9e, [['__scopeId', 'data-v-498fb341']])
+        x9e = Gn(w9e, [['__scopeId', 'data-v-27f5b5cf']])
     fm.initializeFrameDriver().then(() => {
         yP(x9e).mount('#app')
     })
