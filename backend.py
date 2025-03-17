@@ -59,7 +59,7 @@ class Handler:
             dataset = await self.run_in_threadpool(self.project.datasets.create, dataset_name=self.dataset_name)
         return dataset
 
-    async def start_stream(self, session_id, file, message):
+    async def start_stream(self, session_id, file, message, stream_type, value_id):
         logger.debug("Received request with file: %s", file.filename if file else None)
         item_name = f"{session_id}.json"
         dataset = await self.ensure_dataset()
@@ -90,76 +90,32 @@ class Handler:
 
         prompt_item._item._Item__update_item_binary(_json=prompt_item.to_json())
 
-        return item.id
+        execution_id = None
+        if stream_type == "pipeline":
+            pipeline: dl.Pipeline = await self.run_in_threadpool(dl.pipelines.get, pipeline_id=value_id)
+            if pipeline.id is None:
+                raise ValueError("Pipeline not found")
+            elif pipeline.status != "Installed":
+                raise ValueError("Pipeline is not running")
+            pipeline_ex = await self.run_in_threadpool(pipeline.execute, execution_input={"item": item.id})
+            execution_id = pipeline_ex.id
 
-    async def execute_pipeline_and_get_last_node_execution(self, pipeline_id, item_id):
-        pipeline: dl.Pipeline = await self.run_in_threadpool(dl.pipelines.get, pipeline_id=pipeline_id)
-        if pipeline.id is None:
-            raise ValueError("Pipeline not found")
-        elif pipeline.status != "Installed":
-            raise ValueError("Pipeline is not running")
-        pipeline_ex = await self.run_in_threadpool(pipeline.execute, execution_input={"item": item_id})
-        stream_node_id = self.get_last_pipeline_node(pipeline=pipeline)
+        elif stream_type == "model":
+            model = await self.run_in_threadpool(dl.models.get, model_id=value_id)
+            execution = await self.run_in_threadpool(model.predict, item_ids=[item.id])
+            execution_id = execution.id
 
-        last_execution_id = None
-        total_start_time = time.time()
-        timeout = 5 * 60  # 5 min
-        i_cycle_failed_check = 0
 
-        while True:
-            await asyncio.sleep(0.5)
-            now = time.time()
-            if (now - total_start_time) > timeout:
-                data = {"text": "response did not finish in time", "type": "error"}
-                raise ValueError("Timeout reached")
+        return item.id, execution_id
 
-            if last_execution_id is None:
-                # Run blocking pipeline operations in thread pool
-                pipeline_ex = await self.run_in_threadpool(
-                    pipeline.pipeline_executions.get, pipeline_execution_id=pipeline_ex.id
-                )
 
-                filters = dl.Filters(resource=dl.FiltersResource.EXECUTION)
-                filters.add(field="pipeline.id", values=pipeline.id)
-                filters.add(field="pipeline.executionId", values=pipeline_ex.id)
-                filters.add(field="pipeline.nodeId", values=stream_node_id)
-
-                # Run blocking executions list in thread pool
-                exs = await self.run_in_threadpool(dl.executions.list, filters=filters)
-                logger.info("waiting for pipeline ex...")
-                logger.info(f"Streaming: executions found: {exs.items_count}")
-
-                if exs.items_count == 0:
-                    if pipeline_ex.status == "failed":
-                        raise ValueError(f"Pipeline cycle failed, pipeline ex id {pipeline_ex.id}")
-                    if pipeline_ex.status == "success":
-                        i_cycle_failed_check += 1
-                        if i_cycle_failed_check == 2:
-                            raise ValueError(
-                                f"Pipeline cycle finished without response, pipeline ex id {pipeline_ex.id}"
-                            )
-                    await asyncio.sleep(0.5)  # Non-blocking sleep
-                    continue
-
-                last_execution = exs.items[-1]
-                last_execution_id = last_execution.id
-                return last_execution_id
-
-    async def execute_and_stream(self, id, type, item_id):
+    async def stream(self, value_id, stream_type, item_id, execution_id):
 
         dataset = await self.ensure_dataset()
 
         item = await self.run_in_threadpool(dataset.items.get, item_id=item_id)
 
         prompt_item = dl.PromptItem.from_item(item=item)
-
-        execution_id = None
-        if type == "pipeline":
-            execution_id = await self.execute_pipeline_and_get_last_node_execution(id, item_id)
-        elif type == "model":
-            model = await self.run_in_threadpool(dl.models.get, model_id=id)
-            execution = await self.run_in_threadpool(model.predict, item_ids=[item_id])
-            execution_id = execution.id
 
         if execution_id is None:
             raise ValueError("Execution id not found")
@@ -172,11 +128,39 @@ class Handler:
             if (now - total_start_time) > max_timeout:
                 raise ValueError("Timeout reached for execution")
 
-            ex = await self.run_in_threadpool(dl.executions.get, execution_id=execution_id)
+            status = None
+            if stream_type == "pipeline":
+                pipeline = await self.run_in_threadpool(dl.pipelines.get, pipeline_id=value_id)
+                ex = await self.run_in_threadpool(pipeline.pipeline_executions.get, pipeline_execution_id=execution_id)
+                status = ex.status
+            elif stream_type == "model":
+                ex = await self.run_in_threadpool(dl.executions.get, execution_id=execution_id)
+                status =  ex.status_log[-1].get("status", "")
 
-            if ex.status_log[-1].get("status", "") == "created":
-                await asyncio.sleep(0.5)  # Non-blocking sleep
+            print(status)
+
+            if status == "created":  
+                yield {"text": "Created", "type": "status"}
+                await asyncio.sleep(0.5)
                 continue
+
+            elif status == "in-progress":
+                yield {"text": "In Progress", "type": "status"}
+
+            elif status == "failed":
+                yield {"text": f"Execution failed, execution id: {ex.id}", "type": "error"}
+                logger.info("Streaming: status: failed. breaking streaming")
+                raise ValueError(f"Execution failed, execution id: {ex.id}")
+            
+            elif status == "pending":
+                yield {"text": "Pending", "type": "status"}
+                await asyncio.sleep(0.5)
+                continue
+
+            else:
+                yield {"text": status, "type": "status"}
+                logger.info(f"Streaming: status: {status}, which is not expected, please check the status")
+
 
             # Run blocking prompt item fetch in thread pool
             await self.run_in_threadpool(prompt_item.fetch)
@@ -211,15 +195,11 @@ class Handler:
                 await asyncio.sleep(0.1)  # Non-blocking sleep
                 continue
 
-            if ex.status_log[-1].get("status", "") == "success":
+            if status == "success":
                 logger.info("Streaming: status: success. breaking streaming")
-                break
-            if ex.status_log[-1].get("status", "") == "failed":
-                data = {"text": f"Execution failed, execution id: {ex.id}", "type": "error"}
+                data = {"text": "Done", "type": "done"}
                 yield data
-                logger.info("Streaming: status: failed. breaking streaming")
-                raise ValueError(f"Execution failed, execution id: {ex.id}")
-
+                break
             await asyncio.sleep(0.1)  # Non-blocking sleep between iterations
 
 
@@ -228,17 +208,20 @@ async def start_stream(
     session_id: str = Form(...),
     message: str = Form(...),
     project_id: str = Form(...),
+    stream_type: str = Form(...),
+    value_id: str = Form(...),
     file: Optional[UploadFile] = File(None),
 ):
     try:
         handler = Handler(project_id)
-        item_id = await handler.start_stream(session_id, file, message)
+        item_id, execution_id = await handler.start_stream(session_id, file, message, stream_type, value_id)
 
         return {
             "session_id": session_id,
             "message": message,
             "file_name": file.filename if file else None,
             "item_id": item_id,
+            "execution_id": execution_id,
         }
     except HTTPException:
         raise
@@ -248,11 +231,11 @@ async def start_stream(
 
 
 @app.get("/stream")
-async def stream_response(project_id: str, value_id: str, item_id: str, stream_type: str):
+async def stream_response(project_id: str, value_id: str, item_id: str, stream_type: str, execution_id: str):
     async def response_generator():
         try:
             handler = Handler(project_id)
-            async for data in handler.execute_and_stream(value_id, stream_type, item_id):
+            async for data in handler.stream(value_id, stream_type, item_id, execution_id):
                 yield f"data: {json.dumps(data)}\n\n"
 
             # Send completion marker
