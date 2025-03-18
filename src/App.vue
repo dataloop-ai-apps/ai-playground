@@ -4,7 +4,7 @@
         <div v-if="isDragging" class="global-drop-overlay"></div>
 
         <div v-if="!isReady" class="loading-spinner">
-            <dl-spinner text="Loading..." />
+            <dl-spinner type="clock" text="Loading..." />
         </div>
         <div
             v-if="isReady"
