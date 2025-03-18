@@ -5,10 +5,7 @@
     "version": "0.0.25",
     "attributes": {
         "Provider": "Dataloop",
-        "deployed By": "Dataloop",
-        "Category": "Application",
-        "Application Type": "Pipeline Node",
-        "Node Type": "Integration"
+        "deployed By": "Dataloop"
     },
     "codebase": {
         "type": "git",
