@@ -1,41 +1,70 @@
 <template>
     <DlThemeProvider :is-dark="isDark" class="main-background">
+        <!-- Global drop overlay that covers the entire window - just a subtle film effect -->
+        <div v-if="isDragging" class="global-drop-overlay"></div>
+
         <div v-if="!isReady" class="loading-spinner">
-            <dl-spinner type="clock" text="Loading..." />
+            <dl-spinner text="Loading..." />
         </div>
-        <div v-if="isReady" class="chat-container">
+        <div
+            v-if="isReady"
+            class="chat-container"
+            @dragover.prevent="handleDragOver"
+            @dragleave.prevent="handleDragLeave"
+            @drop.prevent="handleDrop"
+        >
+            <!-- Drop zone overlay that appears when dragging files -->
+            <div v-if="isDragging" class="drop-zone-overlay">
+                <div class="drop-zone-content">
+                    <dl-icon icon="icon-dl-attach" size="xl" />
+                    <dl-typography variant="h3" color="textPrimary">Drop file here</dl-typography>
+                    <dl-typography color="textSecondary">Release to upload image</dl-typography>
+                    <div class="drop-zone-border"></div>
+                </div>
+            </div>
+
             <div class="top-bar">
-                <dl-select
-                    class="choose-option"
-                    v-model="choosed_option"
-                    :options="choose_options"
-                    size="m"
-                    width="30%"
-                    @change="handleOptionChange"
-                />
-                <dl-select
-                    v-if="choosed_option === 'Pipeline'"
-                    v-model="selectedOption"
-                    :options="pipeline_options"
-                    placeholder="Choose a pipeline"
-                    size="m"
-                    width="30%"
-                />
+                <div class="select-group">
+                    <dl-select
+                        class="choose-option"
+                        v-model="choosed_option"
+                        :options="choose_options"
+                        size="m"
+                        :width="'140px'"
+                        @change="handleOptionChange"
+                    />
+                    <dl-select
+                        v-if="choosed_option === 'Pipeline'"
+                        v-model="selectedOption"
+                        searchable
+                        :options="pipeline_options"
+                        placeholder="Choose a pipeline"
+                        size="m"
+                        width="60%"
+                    />
 
-                <dl-select
-                    v-if="choosed_option === 'Model'"
-                    v-model="selectedOption"
-                    :options="model_options"
-                    placeholder="Choose a model"
-                    size="m"
-                    width="30%"
+                    <dl-select
+                        v-if="choosed_option === 'Model'"
+                        v-model="selectedOption"
+                        searchable
+                        :options="model_options"
+                        placeholder="Choose a model"
+                        size="m"
+                        width="60%"
+                    />
+                </div>
+                <dl-button
+                    round
+                    icon="icon-dl-refresh"
+                    size="s"
+                    class="restart-button"
+                    hover-bg-color="var(--dl-color-fill-hover)"
+                    color="var(--dl-color-fill-secondary)"
+                    text-color="var(--dl-color-darker)"
+                    hover-text-color="var(--dl-color-darker)"
+                    @click="restartChat"
+                    tooltip="Restart chat"
                 />
-
-                <!-- <div class="theme-toggle">
-                    <button @click="toggleTheme" class="theme-button">
-                        {{ isDark ? '☀️' : '🌙' }}
-                    </button>
-                </div> -->
             </div>
 
             <div class="first-div">
@@ -62,11 +91,18 @@
                                 <BotTextDark v-if="isDark" :source="message.text" />
                                 <BotTextLight v-else :source="message.text" />
                             </div>
-                            <div v-else class="dots"><span>.</span><span>.</span><span>.</span></div>
+
+                            <div v-else class="status-message">
+                                <span>
+                                    {{ choosed_option === 'Pipeline' ? 'Pipeline' : 'Model' }} execution:
+                                    {{ statusMessage }}
+                                </span>
+                                <dl-spinner type="clock" :size="'10px'" class="inline-spinner" />
+                            </div>
                         </dl-typography>
                         <div v-else class="user-message">
                             <img v-if="message.image" :src="message.image" alt="Message Image" class="user-image" />
-                            <dl-typography color="textPrimary" class="chat-bubble">{{ message.text }}</dl-typography>
+                            <dl-typography color="textPrimary" class="chat-bubble"> {{ message.text }}</dl-typography>
                         </div>
                     </div>
                 </div>
@@ -74,8 +110,13 @@
 
             <!-- Second Div: Adjusts to the height of its content -->
             <div class="second-div">
-                <dl-alert v-if="showAlert" type="warning" class="chat-alert" :fluid="true">
-                    Please select a <strong>{{ choosed_option }}</strong> from the dropdown.
+                <dl-alert v-if="showAlert" :type="alertType" class="chat-alert" :fluid="true">
+                    <span v-if="alertType === 'warning'">
+                        Please select a <strong>{{ choosed_option }}</strong> from the dropdown.
+                    </span>
+                    <span v-else>
+                        {{ alertMessage }}
+                    </span>
                 </dl-alert>
                 <div class="textarea-wrapper">
                     <!-- Image Preview -->
@@ -158,10 +199,11 @@ import {
     DlAlert
 } from '@dataloop-ai/components'
 import { DlEvent, DlFrameEvent, SDKPipeline, ThemeType } from '@dataloop-ai/jssdk'
-import { ref, onMounted, computed, nextTick } from 'vue-demi'
+import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue-demi'
 import BotTextDark from './components/BotTextDark.vue'
 import BotTextLight from './components/BotTextLight.vue'
 
+const statusMessage = ref<string>('')
 const messageQueue = ref<string[]>([])
 const isProcessing = ref<boolean>(false)
 const isReady = ref<boolean>(false)
@@ -193,6 +235,12 @@ const imagePreview = ref<string>('')
 
 // Add these refs for the alert
 const showAlert = ref<boolean>(false)
+const alertMessage = ref<string>('Only image files are supported.')
+const alertType = ref<'warning' | 'error'>('warning')
+
+const eventSourceRef = ref<EventSource | null>(null)
+
+const isDragging = ref<boolean>(false)
 
 onMounted(() => {
     window.dl.on(DlEvent.READY, async () => {
@@ -211,7 +259,43 @@ onMounted(() => {
         isReady.value = true
     })
     sessionId.value = Math.random().toString(36).substring(2, 32)
+
+    // Add global event listeners to handle drag events outside the container
+    document.addEventListener('dragend', handleGlobalDragEnd)
+    document.addEventListener('drop', handleGlobalDrop)
+    document.addEventListener('dragover', handleGlobalDragOver)
+    document.addEventListener('dragleave', handleGlobalDragLeave)
 })
+
+onUnmounted(() => {
+    // Clean up global event listeners
+    document.removeEventListener('dragend', handleGlobalDragEnd)
+    document.removeEventListener('drop', handleGlobalDrop)
+    document.removeEventListener('dragover', handleGlobalDragOver)
+    document.removeEventListener('dragleave', handleGlobalDragLeave)
+
+    // Close any open event source
+    if (eventSourceRef.value) {
+        eventSourceRef.value.close()
+        eventSourceRef.value = null
+    }
+})
+
+const handleGlobalDragOver = (event: DragEvent) => {
+    event.preventDefault()
+    isDragging.value = true
+}
+
+const handleGlobalDragLeave = (event: DragEvent) => {
+    // Only consider dragleave events that leave the document
+    if (!event.relatedTarget || event.relatedTarget === document.documentElement) {
+        isDragging.value = false
+    }
+}
+
+const handleGlobalDragEnd = () => {
+    isDragging.value = false
+}
 
 const handleOptionChange = (value: string) => {
     if (value !== last_option.value) {
@@ -273,6 +357,7 @@ const sendMessage = async () => {
 
     // Check if a pipeline or model is selected
     if (!selectedOption.value) {
+        alertType.value = 'warning'
         showAlert.value = true
         setTimeout(() => {
             showAlert.value = false
@@ -281,6 +366,7 @@ const sendMessage = async () => {
     }
 
     askDisabled.value = true
+    statusMessage.value = ''
     const userQuestionValue = userQuestion.value
     userQuestion.value = ''
     nextTick(() => autoResize())
@@ -305,7 +391,8 @@ const sendMessage = async () => {
         formData.append('message', userQuestionValue)
         formData.append('session_id', sessionId.value)
         formData.append('project_id', project_id.value)
-
+        formData.append('stream_type', choosed_option.value === 'Pipeline' ? 'pipeline' : 'model')
+        formData.append('value_id', selectedOption.value.value)
         if (selectedImage.value) {
             const MAX_FILE_SIZE = 50 * 1024 * 1024
             if (selectedImage.value.size > MAX_FILE_SIZE) {
@@ -348,15 +435,20 @@ const sendMessage = async () => {
             project_id: project_id.value,
             value_id: selectedOption.value.value,
             item_id: data.item_id,
-            stream_type: choosed_option.value === 'Pipeline' ? 'pipeline' : 'model'
+            stream_type: choosed_option.value === 'Pipeline' ? 'pipeline' : 'model',
+            execution_id: data.execution_id
         })
         const eventSource = new EventSource(`/stream?${params.toString()}`)
+        eventSourceRef.value = eventSource
 
         eventSource.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data)
 
                 switch (data.type) {
+                    case 'status':
+                        statusMessage.value = data.text
+                        break
                     case 'system':
                         messageQueue.value.push(data.text)
                         processQueue()
@@ -392,6 +484,21 @@ const sendMessage = async () => {
         messages.value[messages.value.length - 1].text = `Error: ${error.message}`
         askDisabled.value = false
     }
+}
+const restartChat = () => {
+    if (eventSourceRef.value) {
+        eventSourceRef.value.close()
+        eventSourceRef.value = null
+    }
+    messages.value = []
+    sessionId.value = Math.random().toString(36).substring(2, 32)
+    userQuestion.value = ''
+    statusMessage.value = ''
+    messageQueue.value = []
+    isProcessing.value = false
+    askDisabled.value = false
+    showAlert.value = false
+    deleteImage()
 }
 
 const processQueue = () => {
@@ -458,15 +565,103 @@ const deleteImage = () => {
 const handleFileUpload = (event: Event) => {
     const target = event.target as HTMLInputElement
     if (target.files && target.files.length > 0) {
-        selectedImage.value = target.files[0]
+        const file = target.files[0]
+
+        // Check if file is an image
+        if (!file.type.startsWith('image/')) {
+            // Show error message for non-image files
+            alertMessage.value = 'Only image files are supported.'
+            alertType.value = 'error'
+            showAlert.value = true
+            setTimeout(() => {
+                showAlert.value = false
+            }, 5000)
+
+            // Reset the file input
+            if (fileInput.value) {
+                fileInput.value.value = ''
+            }
+            return
+        }
+
+        selectedImage.value = file
         const reader = new FileReader()
         reader.onload = (e) => {
             if (e.target?.result) {
                 imagePreview.value = e.target.result as string
             }
         }
-        reader.readAsDataURL(target.files[0])
+        reader.readAsDataURL(file)
     }
+}
+
+const handleDragOver = (event: DragEvent) => {
+    event.preventDefault()
+    isDragging.value = true
+}
+
+const handleDragLeave = (event: DragEvent) => {
+    event.preventDefault()
+
+    // Check if the drag leave event is leaving the container
+    // by checking if the related target is not within the container
+    const container = event.currentTarget as HTMLElement
+    const relatedTarget = event.relatedTarget as Node
+
+    if (!relatedTarget || !container.contains(relatedTarget)) {
+        isDragging.value = false
+    }
+}
+
+const handleDrop = (event: DragEvent) => {
+    event.preventDefault()
+    isDragging.value = false
+    processDroppedFile(event)
+}
+
+const handleGlobalDrop = (event: DragEvent) => {
+    event.preventDefault()
+    isDragging.value = false
+
+    // Only process if we're dropping on the document (not on our chat container)
+    if (event.target && !isElementInChatContainer(event.target as Node)) {
+        processDroppedFile(event)
+    }
+}
+
+// Helper to check if an element is within our chat container
+const isElementInChatContainer = (element: Node): boolean => {
+    const chatContainer = document.querySelector('.chat-container')
+    return chatContainer ? chatContainer.contains(element) : false
+}
+
+// Common function to process dropped files
+const processDroppedFile = (event: DragEvent) => {
+    if (!event.dataTransfer?.files.length) return
+
+    const file = event.dataTransfer.files[0]
+
+    // Check if file is an image
+    if (!file.type.startsWith('image/')) {
+        // Show error message for non-image files
+        alertMessage.value = 'Only image files are supported.'
+        alertType.value = 'error'
+        showAlert.value = true
+        setTimeout(() => {
+            showAlert.value = false
+        }, 5000)
+        return
+    }
+
+    // Use the existing file handling logic
+    selectedImage.value = file
+    const reader = new FileReader()
+    reader.onload = (e) => {
+        if (e.target?.result) {
+            imagePreview.value = e.target.result as string
+        }
+    }
+    reader.readAsDataURL(file)
 }
 </script>
 
@@ -480,6 +675,7 @@ const handleFileUpload = (event: Event) => {
     padding: 0 1rem;
     display: flex;
     align-items: center;
+    justify-content: space-between;
     background-color: var(--dl-color-component);
     border-bottom: 1px solid var(--dl-color-separator);
 }
@@ -497,6 +693,7 @@ const handleFileUpload = (event: Event) => {
     max-width: 48rem;
     margin: 0 auto;
     width: 100%;
+    position: relative;
 }
 
 .first-div {
@@ -576,43 +773,21 @@ const handleFileUpload = (event: Event) => {
 .dots {
     display: inline-block;
     font-size: 24px;
-    margin-top: -7px;
+    margin-top: -15px;
 }
 
-.dots span {
-    animation: blink 1.2s infinite;
-    animation-delay: calc(0.4s * var(--i));
-    opacity: 0;
+.status-message {
+    display: flex;
+    align-items: center; /* Vertically center the items */
+    margin-top: 7px;
 }
 
-.dots span:nth-child(1) {
-    --i: 0;
+.inline-spinner {
+    margin-left: 5px; /* Add some space between the text and the spinner */
 }
-
-.dots span:nth-child(2) {
-    --i: 1;
-}
-
-.dots span:nth-child(3) {
-    --i: 2;
-}
-
 .bot-text {
     margin-top: 7px;
     white-space: normal;
-}
-
-@keyframes blink {
-    0%,
-    20% {
-        opacity: 0;
-    }
-    40% {
-        opacity: 1;
-    }
-    100% {
-        opacity: 0;
-    }
 }
 
 .auto-expand {
@@ -645,6 +820,12 @@ const handleFileUpload = (event: Event) => {
 
 .send-button :deep(button),
 .action-button :deep(button) {
+    width: 26px !important;
+    height: 26px !important;
+    border: 1px solid var(--dl-color-separator) !important;
+}
+
+.restart-button :deep(button) {
     width: 26px !important;
     height: 26px !important;
     border: 1px solid var(--dl-color-separator) !important;
@@ -729,6 +910,98 @@ const handleFileUpload = (event: Event) => {
     width: calc(100% - 32px) !important;
     max-width: 46rem;
     z-index: 100;
+}
+
+.select-group {
+    display: flex;
+    width: 60%;
+}
+
+.drop-zone-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(var(--dl-color-darker-rgb), 0.7);
+    z-index: 1001; /* Higher than global overlay */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+.drop-zone-content {
+    background-color: var(--dl-color-fill-secondary);
+    border-radius: 8px;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: var(--dl-date-picker-shadow);
+    animation: scaleIn 0.3s ease-in-out;
+    position: relative;
+    overflow: hidden;
+}
+
+.drop-zone-border {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border: 2px dashed var(--dl-color-fill-hover);
+    border-radius: 6px;
+    pointer-events: none;
+    animation: pulse 2s infinite;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        transform: scale(0.95);
+    }
+    to {
+        transform: scale(1);
+    }
+}
+
+.global-drop-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(1px);
+    z-index: 999; /* Lower than the drop zone overlay */
+    pointer-events: none;
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+.drop-zone-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(var(--dl-color-darker-rgb), 0.7);
+    z-index: 1001; /* Higher than global overlay */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+    animation: fadeIn 0.2s ease-in-out;
 }
 </style>
 
