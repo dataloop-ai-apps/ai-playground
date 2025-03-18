@@ -213,6 +213,7 @@ const currentUser = ref<string>('')
 const messages = ref<Array<{ text: string; sender: string; image?: string }>>([])
 const askDisabled = ref<boolean>(false)
 const sessionId = ref<string>('')
+const currentTypingInterval = ref<ReturnType<typeof setInterval> | null>(null)
 
 const project_id = ref<string>('')
 const selectedOption = ref<{ label: string; value: string }>()
@@ -486,10 +487,19 @@ const sendMessage = async () => {
     }
 }
 const restartChat = () => {
+    // Close event source if active
     if (eventSourceRef.value) {
         eventSourceRef.value.close()
         eventSourceRef.value = null
     }
+
+    // Clear typing interval if active
+    if (currentTypingInterval.value) {
+        clearInterval(currentTypingInterval.value)
+        currentTypingInterval.value = null
+    }
+
+    // Reset all state variables
     messages.value = []
     sessionId.value = Math.random().toString(36).substring(2, 32)
     userQuestion.value = ''
@@ -510,7 +520,13 @@ const processQueue = () => {
     let currentText = messages.value[messageIndex]?.text || '' // Use the existing message as the starting point
     let index = currentText.length // Start appending from where the current message ends
 
-    const typingInterval = setInterval(() => {
+    // Clear any existing interval
+    if (currentTypingInterval.value !== null) {
+        clearInterval(currentTypingInterval.value)
+    }
+
+    // Set up the new interval directly to the ref
+    currentTypingInterval.value = setInterval(() => {
         if (index < message.length) {
             // Append one character at a time from the new portion
             currentText += message[index]
@@ -519,7 +535,8 @@ const processQueue = () => {
             index++
         } else {
             // Typing is complete
-            clearInterval(typingInterval)
+            clearInterval(currentTypingInterval.value!)
+            currentTypingInterval.value = null
             isProcessing.value = false
             processQueue() // Process the next message in the queue
         }
