@@ -22,7 +22,7 @@
     },
     "devDependencies": {
         "@dataloop-ai/components": "^0.20.99",
-        "@dataloop-ai/jssdk": "^0.0.101",
+        "@dataloop-ai/jssdk": "^0.0.102",
         "@types/jsdom": "^21.1.0",
         "@types/node": "^18.14.2",
         "@typescript-eslint/eslint-plugin": "^5.20.0",
