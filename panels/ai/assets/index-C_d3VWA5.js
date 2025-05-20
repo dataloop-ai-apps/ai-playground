@@ -145794,7 +145794,10 @@ https://github.com/highlightjs/highlight.js/issues/2277`
             c = ab,
             l = Uo,
             u = () => {
-                const p = e.ON_PREM
+                let p
+                try {
+                    p = e.ON_PREM
+                } catch {}
                 return p === void 0 || p === 'true'
             }
         t.isOnPrem = u
