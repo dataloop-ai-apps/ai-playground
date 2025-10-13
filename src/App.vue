@@ -18,7 +18,7 @@
                 <div class="drop-zone-content">
                     <dl-icon icon="icon-dl-attach" size="xl" />
                     <dl-typography variant="h3" color="textPrimary">Drop file here</dl-typography>
-                    <dl-typography color="textSecondary">Release to upload image</dl-typography>
+                    <dl-typography color="textSecondary">Release to upload new image</dl-typography>
                     <div class="drop-zone-border"></div>
                 </div>
             </div>
