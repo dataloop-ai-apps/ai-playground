@@ -194300,7 +194300,7 @@ https://github.com/highlightjs/highlight.js/issues/2277`
             }
         }),
         t9e = Yn(e9e, [['__scopeId', 'data-v-d5ecdc80']]),
-        n9e = (t) => (Mp('data-v-f94561f6'), (t = t()), Lp(), t),
+        n9e = (t) => (Mp('data-v-30770783'), (t = t()), Lp(), t),
         r9e = { key: 0, class: 'global-drop-overlay' },
         i9e = { key: 1, class: 'loading-spinner' },
         a9e = { key: 0, class: 'drop-zone-overlay' },
@@ -194655,7 +194655,9 @@ https://github.com/highlightjs/highlight.js/issues/2277`
                                                                 Dn(Rg),
                                                                 { color: 'textSecondary' },
                                                                 {
-                                                                    default: Sn(() => [jr('Release to upload image')]),
+                                                                    default: Sn(() => [
+                                                                        jr('Release to upload new image')
+                                                                    ]),
                                                                     _: 1
                                                                 }
                                                             ),
@@ -195017,7 +195019,7 @@ https://github.com/highlightjs/highlight.js/issues/2277`
                 )
             }
         }),
-        C9e = Yn(T9e, [['__scopeId', 'data-v-f94561f6']])
+        C9e = Yn(T9e, [['__scopeId', 'data-v-30770783']])
     pm.initializeFrameDriver().then(() => {
         EP(C9e).mount('#app')
     })
