@@ -53,7 +53,7 @@
                 "botUserName": "tab-apps@dataloop.ai",
                 "panelNames": ["ai"],
                 "runtime": {
-                    "runnerImage": "gcr.io/viewo-g/piper/agent/cpu/ingest-gradio:0.1.15",
+                    "runnerImage": "gcr.io/viewo-g/piper/agent/cpu/ingest-gradio:0.1.16",
                     "podType": "regular-m",
                     "concurrency": 10,
                     "autoscaler": {
