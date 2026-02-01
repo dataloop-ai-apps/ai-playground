@@ -2,6 +2,7 @@ python /tmp/app/local_login.py &
 
 python -m uvicorn "backend:app" \
         --reload \
+        --reload-exclude="node_modules" \
         --host="0.0.0.0" \
         --port=5463 \
         --timeout-keep-alive=60 \
