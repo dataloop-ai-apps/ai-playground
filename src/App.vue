@@ -17,8 +17,8 @@
             <div v-if="isDragging" class="drop-zone-overlay">
                 <div class="drop-zone-content">
                     <dl-icon icon="icon-dl-attach" size="xl" />
-                    <dl-typography variant="h3" color="textPrimary">Drop file here</dl-typography>
-                    <dl-typography color="textSecondary">Release to upload new image</dl-typography>
+                    <dl-typography variant="h3" color="var(--dell-gray-800)">Drop file here</dl-typography>
+                    <dl-typography color="var(--dell-gray-800)">Release to upload new image</dl-typography>
                     <div class="drop-zone-border"></div>
                 </div>
             </div>
@@ -58,10 +58,10 @@
                     icon="icon-dl-refresh"
                     size="s"
                     class="restart-button"
-                    hover-bg-color="var(--dl-color-fill-hover)"
-                    color="var(--dl-color-fill-secondary)"
-                    text-color="var(--dl-color-darker)"
-                    hover-text-color="var(--dl-color-darker)"
+                    hover-bg-color="var(--dell-gray-100)"
+                    color="var(--dell-gray-100)"
+                    text-color="var(--dell-gray-800)"
+                    hover-text-color="var(--dell-gray-800)"
                     @click="restartChat"
                     tooltip="Restart chat"
                 />
@@ -76,8 +76,7 @@
                         <dl-icon
                             v-if="message.sender === 'bot'"
                             class="massage-item"
-                            icon="dataloop-logo"
-                            :svgSource="'assets'"
+                            icon="icon-dl-dataloop"
                             size="l"
                             :svg="true"
                         ></dl-icon>
@@ -128,8 +127,8 @@
                             icon="icon-dl-close"
                             size="5px"
                             class="delete-button"
-                            hover-bg-color="var(--dl-color-darker)"
-                            hover-text-color="var(--dl-color-bg)"
+                            hover-bg-color="var(--dell-gray-800)"
+                            hover-text-color="var(--dell-white)"
                             @click="deleteImage"
                         />
                     </div>
@@ -157,10 +156,10 @@
                             icon="icon-dl-attach"
                             size="s"
                             class="action-button"
-                            hover-bg-color="var(--dl-color-fill-hover)"
-                            color="var(--dl-color-fill-secondary)"
-                            text-color="var(--dl-color-darker)"
-                            hover-text-color="var(--dl-color-darker)"
+                            hover-bg-color="var(--dell-gray-100)"
+                            color="var(--dell-gray-100)"
+                            text-color="var(--dell-gray-800)"
+                            hover-text-color="var(--dell-gray-800)"
                             @click="handleClick"
                         />
                         <dl-button
@@ -171,10 +170,10 @@
                             size="xl"
                             class="send-button"
                             :disabled="!userQuestion"
-                            hover-bg-color="var(--dl-color-fill-hover)"
-                            color="var(--dl-color-fill-secondary)"
-                            text-color="var(--dl-color-darker)"
-                            hover-text-color="var(--dl-color-darker)"
+                            hover-bg-color="var(--dell-gray-100)"
+                            color="var(--dell-gray-100)"
+                            text-color="var(--dell-gray-800)"
+                            hover-text-color="var(--dell-gray-800)"
                             @click="sendMessage"
                         />
                     </div>
@@ -684,7 +683,7 @@ const processDroppedFile = (event: DragEvent) => {
 
 <style scoped>
 .main-background {
-    background-color: var(--dl-color-component);
+    background-color: var(--dell-white);
 }
 
 .top-bar {
@@ -693,8 +692,8 @@ const processDroppedFile = (event: DragEvent) => {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background-color: var(--dl-color-component);
-    border-bottom: 1px solid var(--dl-color-separator);
+    background-color: var(--dell-white);
+    border-bottom: 1px solid var(--dell-gray-300);
 }
 
 .loading-spinner {
@@ -744,7 +743,7 @@ const processDroppedFile = (event: DragEvent) => {
 }
 
 .chat-bubble {
-    background-color: var(--dl-color-fill-secondary);
+    background-color: var(--dell-gray-100);
     border-radius: 20px; /* Rounded edges */
     padding: 10px 20px; /* Top and bottom padding of 10px, left and right padding of 20px */
     margin: 0 0.5rem 0 0; /* Top and bottom margin of 10px, left margin auto, right margin 0 */
@@ -814,7 +813,7 @@ const processDroppedFile = (event: DragEvent) => {
 }
 
 .textarea-wrapper {
-    background-color: var(--dl-color-fill-secondary);
+    background-color: var(--dell-gray-100);
     padding: 10px;
     border-radius: 8px;
     margin: 0 1rem;
@@ -839,13 +838,13 @@ const processDroppedFile = (event: DragEvent) => {
 .action-button :deep(button) {
     width: 26px !important;
     height: 26px !important;
-    border: 1px solid var(--dl-color-separator) !important;
+    border: 1px solid var(--dell-gray-300) !important;
 }
 
 .restart-button :deep(button) {
     width: 26px !important;
     height: 26px !important;
-    border: 1px solid var(--dl-color-separator) !important;
+    border: 1px solid var(--dell-gray-300) !important;
 }
 
 .theme-toggle {
@@ -908,15 +907,15 @@ const processDroppedFile = (event: DragEvent) => {
     height: 12px !important;
     min-width: 12px !important;
     min-height: 12px !important;
-    border: 1px solid var(--dl-color-fill-hover) !important;
-    background-color: var(--dl-color-black) !important;
-    color: var(--dl-color-white) !important;
+    border: 1px solid var(--dell-blue-600) !important;
+    background-color: var(--dell-gray-900) !important;
+    color: var(--dell-white) !important;
     opacity: 1 !important;
 }
 
 [data-theme='dark-mode'] .delete-button :deep(button) {
-    background-color: var(--dl-color-white) !important;
-    color: var(--dl-color-black) !important;
+    background-color: var(--dell-white) !important;
+    color: var(--dell-gray-900) !important;
 }
 
 .chat-alert {
@@ -940,7 +939,7 @@ const processDroppedFile = (event: DragEvent) => {
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(var(--dl-color-darker-rgb), 0.7);
+    background-color: rgba(var(--dell-gray-800-rgb), 0.7);
     z-index: 1001; /* Higher than global overlay */
     display: flex;
     justify-content: center;
@@ -950,7 +949,7 @@ const processDroppedFile = (event: DragEvent) => {
 }
 
 .drop-zone-content {
-    background-color: var(--dl-color-fill-secondary);
+    background-color: var(--dell-gray-100);
     border-radius: 8px;
     padding: 2rem;
     display: flex;
@@ -969,7 +968,7 @@ const processDroppedFile = (event: DragEvent) => {
     left: 0;
     right: 0;
     bottom: 0;
-    border: 2px dashed var(--dl-color-fill-hover);
+    border: 2px dashed var(--dell-gray-100);
     border-radius: 6px;
     pointer-events: none;
     animation: pulse 2s infinite;
@@ -1012,7 +1011,7 @@ const processDroppedFile = (event: DragEvent) => {
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(var(--dl-color-darker-rgb), 0.7);
+    background-color: rgba(var(--dell-gray-800-rgb), 0.7);
     z-index: 1001; /* Higher than global overlay */
     display: flex;
     justify-content: center;
