@@ -16,7 +16,7 @@ from typing import Optional
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -24,10 +24,10 @@ thread_pool = ThreadPoolExecutor(max_workers=10)  # Adjust max_workers as needed
 
 app = FastAPI()
 
-# Add this after creating the FastAPI app
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with your frontend domain
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -137,7 +137,7 @@ class Handler:
                 ex = await self.run_in_threadpool(dl.executions.get, execution_id=execution_id)
                 status =  ex.status_log[-1].get("status", "")
 
-            print(status)
+            logger.debug("Execution status: %s", status)
 
             if status == "created":  
                 yield {"text": "Created", "type": "status"}
@@ -159,7 +159,7 @@ class Handler:
 
             else:
                 yield {"text": status, "type": "status"}
-                logger.info(f"Streaming: status: {status}, which is not expected, please check the status")
+                logger.info("Streaming: status: %s, which is not expected, please check the status", status)
 
 
             # Run blocking prompt item fetch in thread pool
@@ -187,7 +187,7 @@ class Handler:
                     f"Unknown assistant content type: {type(last_content)}, item id: {prompt_item._item.id}"
                 )
 
-            logger.info(f"Streaming: {answer}")
+            logger.info("Streaming: %s", answer)
             if isinstance(answer, str):
                 data = {"text": answer, "type": "system"}
                 yield data
@@ -226,8 +226,8 @@ async def start_stream(
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception("Detailed error in start-stream:")  # This will log the full traceback
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        logger.exception("Detailed error in start-stream:")
+        raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
 @app.get("/stream")
@@ -242,7 +242,8 @@ async def stream_response(project_id: str, value_id: str, item_id: str, stream_t
             yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
         except Exception as e:
-            error_data = {"text": f"Error occurred: {str(e)}", "type": "error"}
+            logger.exception("Error in stream response generator:")
+            error_data = {"text": "An unexpected error occurred", "type": "error"}
             yield f"data: {json.dumps(error_data)}\n\n"
 
     return StreamingResponse(

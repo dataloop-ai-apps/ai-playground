@@ -12,11 +12,18 @@ class Runner:
     def __init__(self):
         logger.info('Runner init')
 
-        self.uvicorn_cmd = 'uvicorn backend:app --host 0.0.0.0 --port 3000 --timeout-keep-alive 60 --h11-max-incomplete-event-size 262144 --workers 4'
+        self.uvicorn_cmd = [
+            'uvicorn', 'backend:app',
+            '--host', '0.0.0.0',
+            '--port', '3000',
+            '--timeout-keep-alive', '60',
+            '--h11-max-incomplete-event-size', '262144',
+            '--workers', '4',
+        ]
 
         # Start subprocesses
         self.uvicorn_process = subprocess.Popen(
-            self.uvicorn_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1
+            self.uvicorn_cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1
         )
 
         logger.info('stream logs')
@@ -35,7 +42,7 @@ class Runner:
                 for stream in readable:
                     line = stream.readline()
                     if line:
-                        logger.info(f"{streams[stream]}: {line.strip()}")
+                        logger.info("%s: %s", streams[stream], line.strip())
                     else:
                         # When EOF is reached, remove it from the dictionary
                         del streams[stream]
