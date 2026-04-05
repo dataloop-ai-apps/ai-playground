@@ -34,6 +34,19 @@ app.add_middleware(
 )
 
 
+def _extract_text_content(content, item_id: str) -> str:
+    """Extract text from chat-format content (str or list of content parts)."""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        texts = [part["text"] for part in content
+                 if isinstance(part, dict) and part.get("type") == "text"]
+        if not texts:
+            raise ValueError(f"No text content found in response for item {item_id}")
+        return texts[0]
+    raise ValueError(f"Unknown content type: {type(content)}, item id: {item_id}")
+
+
 class Handler:
     def __init__(self, project_id: str):
         self.dataset_name = 'ai-playground-history'
@@ -59,36 +72,54 @@ class Handler:
             dataset = await self.run_in_threadpool(self.project.datasets.create, dataset_name=self.dataset_name)
         return dataset
 
-    async def start_stream(self, session_id, file, message, stream_type, value_id):
-        logger.debug("Received request with file: %s", file.filename if file else None)
+    async def start_stream(self, session_id, file, message, stream_type, value_id,
+                           use_llm_trace=False):
+        logger.debug(f"Received request with file: {file.filename if file else None}")
         item_name = f"{session_id}.json"
         dataset = await self.ensure_dataset()
 
         image_item = None
         if file:
             file_bytes = await file.read()
+            MAX_FILE_SIZE = 10 * 1024 * 1024
+            if len(file_bytes) > MAX_FILE_SIZE:
+                raise HTTPException(status_code=400, detail="File size too large")
             image_item = await self.run_in_threadpool(
                 dataset.items.upload, local_path=file_bytes, overwrite=True, remote_name=f"files/{file.filename}"
             )
-            MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB limit
-            if len(file_bytes) > MAX_FILE_SIZE:
-                raise HTTPException(status_code=400, detail="File size too large")
 
-        try:
-            item = await self.run_in_threadpool(dataset.items.get, filepath=f"/{item_name}")
-        except dl.exceptions.NotFound:
-            prompt_item = dl.PromptItem(name=item_name)
-            item = await self.run_in_threadpool(dataset.items.upload, local_path=prompt_item, overwrite=True)
+        if use_llm_trace:
+            try:
+                item = await self.run_in_threadpool(dataset.items.get, filepath=f"/{item_name}")
+            except dl.exceptions.NotFound:
+                trace = dl.LLMTrace(name=item_name)
+                item = await self.run_in_threadpool(dataset.items.upload, local_path=trace, overwrite=True)
 
-        prompt_item = dl.PromptItem.from_item(item=item)
-        prompt_key = str(len(prompt_item.prompts) + 1)
-        prompt = dl.Prompt(key=prompt_key)
-        prompt.add_element(value=message, mimetype=dl.PromptType.TEXT)
-        if image_item:
-            prompt.add_element(value=image_item.stream, mimetype=dl.PromptType.IMAGE)
-        prompt_item.prompts.append(prompt)
+            trace = dl.LLMTrace.from_item(item=item)
+            if image_item:
+                content = [
+                    {"type": "text", "text": message},
+                    {"type": "image_url", "image_url": {"url": image_item.stream}},
+                ]
+            else:
+                content = message
+            trace.add_message(dl.LLMMessage(role="user", content=content))
+            await self.run_in_threadpool(trace.update)
+        else:
+            try:
+                item = await self.run_in_threadpool(dataset.items.get, filepath=f"/{item_name}")
+            except dl.exceptions.NotFound:
+                prompt_item = dl.PromptItem(name=item_name)
+                item = await self.run_in_threadpool(dataset.items.upload, local_path=prompt_item, overwrite=True)
 
-        prompt_item._item._Item__update_item_binary(_json=prompt_item.to_json())
+            prompt_item = dl.PromptItem.from_item(item=item)
+            prompt_key = str(len(prompt_item.prompts) + 1)
+            prompt = dl.Prompt(key=prompt_key)
+            prompt.add_element(value=message, mimetype=dl.PromptType.TEXT)
+            if image_item:
+                prompt.add_element(value=image_item.stream, mimetype=dl.PromptType.IMAGE)
+            prompt_item.prompts.append(prompt)
+            prompt_item._item._Item__update_item_binary(_json=prompt_item.to_json())
 
         execution_id = None
         if stream_type == "pipeline":
@@ -99,23 +130,24 @@ class Handler:
                 raise ValueError("Pipeline is not running")
             pipeline_ex = await self.run_in_threadpool(pipeline.execute, execution_input={"item": item.id})
             execution_id = pipeline_ex.id
-
         elif stream_type == "model":
             model = await self.run_in_threadpool(dl.models.get, model_id=value_id)
             execution = await self.run_in_threadpool(model.predict, item_ids=[item.id])
             execution_id = execution.id
 
-
         return item.id, execution_id
 
 
     async def stream(self, value_id, stream_type, item_id, execution_id):
-
         dataset = await self.ensure_dataset()
-
         item = await self.run_in_threadpool(dataset.items.get, item_id=item_id)
+        dltype = item.system.get('shebang', {}).get('dltype')
 
-        prompt_item = dl.PromptItem.from_item(item=item)
+        if dltype == 'llm_trace':
+            trace = dl.LLMTrace.from_item(item=item)
+            initial_msg_count = len(trace.messages)
+        else:
+            prompt_item = dl.PromptItem.from_item(item=item)
 
         if execution_id is None:
             raise ValueError("Execution id not found")
@@ -135,72 +167,60 @@ class Handler:
                 status = ex.status
             elif stream_type == "model":
                 ex = await self.run_in_threadpool(dl.executions.get, execution_id=execution_id)
-                status =  ex.status_log[-1].get("status", "")
+                status = ex.status_log[-1].get("status", "")
 
-            print(status)
+            logger.debug(f"Execution status: {status}")
 
-            if status == "created":  
+            if status == "created":
                 yield {"text": "Created", "type": "status"}
                 await asyncio.sleep(0.5)
                 continue
-
             elif status == "in-progress":
                 yield {"text": "In Progress", "type": "status"}
-
             elif status == "failed":
                 yield {"text": f"Execution failed, execution id: {ex.id}", "type": "error"}
                 logger.info("Streaming: status: failed. breaking streaming")
                 raise ValueError(f"Execution failed, execution id: {ex.id}")
-            
             elif status == "pending":
                 yield {"text": "Pending", "type": "status"}
                 await asyncio.sleep(0.5)
                 continue
-
             else:
                 yield {"text": status, "type": "status"}
-                logger.info(f"Streaming: status: {status}, which is not expected, please check the status")
+                logger.info(f"Streaming: status: {status}, which is not expected")
 
+            if dltype == 'llm_trace':
+                await self.run_in_threadpool(trace.fetch)
+                messages = trace.messages
+                new_assistant = [m for m in messages[initial_msg_count:]
+                                 if m.get("role") == "assistant"]
+                if not new_assistant:
+                    await asyncio.sleep(0.5)
+                    continue
 
-            # Run blocking prompt item fetch in thread pool
-            await self.run_in_threadpool(prompt_item.fetch)
-            messages = prompt_item.to_messages()
-            assistant_messages = [message for message in messages if message["role"] == "assistant"]
-
-            if (
-                not prompt_item.assistant_prompts
-                or prompt_item.assistant_prompts[-1].key != prompt_item.prompts[-1].key
-            ):
-                await asyncio.sleep(0.5)  # Non-blocking sleep
-                continue
-
-            last_content = assistant_messages[-1]["content"]
-            if isinstance(last_content, list):
-                answer = [a["text"] for a in last_content if a["type"] == "text"]
-                if len(answer) == 0:
-                    raise ValueError("Cant find text content in response")
-                answer = answer[0]
-            elif isinstance(last_content, str):
-                answer = last_content
+                answer = _extract_text_content(new_assistant[-1].get("content", ""), item_id)
             else:
-                raise ValueError(
-                    f"Unknown assistant content type: {type(last_content)}, item id: {prompt_item._item.id}"
-                )
+                await self.run_in_threadpool(prompt_item.fetch)
+                messages = prompt_item.to_messages()
+
+                if (
+                    not prompt_item.assistant_prompts
+                    or prompt_item.assistant_prompts[-1].key != prompt_item.prompts[-1].key
+                ):
+                    await asyncio.sleep(0.5)
+                    continue
+
+                assistant_messages = [m for m in messages if m["role"] == "assistant"]
+                answer = _extract_text_content(assistant_messages[-1]["content"], item_id)
 
             logger.info(f"Streaming: {answer}")
-            if isinstance(answer, str):
-                data = {"text": answer, "type": "system"}
-                yield data
-            else:
-                await asyncio.sleep(0.1)  # Non-blocking sleep
-                continue
+            yield {"text": answer, "type": "system"}
 
             if status == "success":
                 logger.info("Streaming: status: success. breaking streaming")
-                data = {"text": "Done", "type": "done"}
-                yield data
+                yield {"text": "Done", "type": "done"}
                 break
-            await asyncio.sleep(0.1)  # Non-blocking sleep between iterations
+            await asyncio.sleep(0.1)
 
 
 @app.post("/start-stream")
@@ -211,10 +231,15 @@ async def start_stream(
     stream_type: str = Form(...),
     value_id: str = Form(...),
     file: Optional[UploadFile] = File(None),
+    use_llm_trace: Optional[str] = Form("false"),
 ):
     try:
         handler = Handler(project_id)
-        item_id, execution_id = await handler.start_stream(session_id, file, message, stream_type, value_id)
+        llm_trace_flag = use_llm_trace.lower() == "true"
+        item_id, execution_id = await handler.start_stream(
+            session_id, file, message, stream_type, value_id,
+            use_llm_trace=llm_trace_flag,
+        )
 
         return {
             "session_id": session_id,

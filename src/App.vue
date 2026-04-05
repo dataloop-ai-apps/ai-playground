@@ -53,18 +53,27 @@
                         width="60%"
                     />
                 </div>
-                <dl-button
-                    round
-                    icon="icon-dl-refresh"
-                    size="s"
-                    class="restart-button"
-                    hover-bg-color="var(--dell-gray-100)"
-                    color="var(--dell-gray-100)"
-                    text-color="var(--dell-gray-800)"
-                    hover-text-color="var(--dell-gray-800)"
-                    @click="restartChat"
-                    tooltip="Restart chat"
-                />
+                <div class="top-bar-actions">
+                    <div class="llm-trace-toggle">
+                        <dl-typography variant="small" color="var(--dell-gray-800)">LLM Trace</dl-typography>
+                        <dl-switch
+                            :model-value="useLlmTrace"
+                            @update:model-value="toggleLlmTrace"
+                        />
+                    </div>
+                    <dl-button
+                        round
+                        icon="icon-dl-refresh"
+                        size="s"
+                        class="restart-button"
+                        hover-bg-color="var(--dell-gray-100)"
+                        color="var(--dell-gray-100)"
+                        text-color="var(--dell-gray-800)"
+                        hover-text-color="var(--dell-gray-800)"
+                        @click="restartChat"
+                        tooltip="Restart chat"
+                    />
+                </div>
             </div>
 
             <div class="first-div">
@@ -195,7 +204,8 @@ import {
     DlAvatar,
     DlSelect,
     DlTextArea,
-    DlAlert
+    DlAlert,
+    DlSwitch
 } from '@dataloop-ai/components'
 import { DlEvent, DlFrameEvent, SDKPipeline, ThemeType } from '@dataloop-ai/jssdk'
 import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue-demi'
@@ -241,6 +251,12 @@ const alertType = ref<'warning' | 'error'>('warning')
 const eventSourceRef = ref<EventSource | null>(null)
 
 const isDragging = ref<boolean>(false)
+
+const useLlmTrace = ref<boolean>(localStorage.getItem('useLlmTrace') === 'true')
+const toggleLlmTrace = (val: boolean) => {
+    useLlmTrace.value = val
+    localStorage.setItem('useLlmTrace', String(val))
+}
 
 onMounted(() => {
     window.dl.on(DlEvent.READY, async () => {
@@ -393,6 +409,7 @@ const sendMessage = async () => {
         formData.append('project_id', project_id.value)
         formData.append('stream_type', choosed_option.value === 'Pipeline' ? 'pipeline' : 'model')
         formData.append('value_id', selectedOption.value.value)
+        formData.append('use_llm_trace', useLlmTrace.value.toString())
         if (selectedImage.value) {
             const MAX_FILE_SIZE = 50 * 1024 * 1024
             if (selectedImage.value.size > MAX_FILE_SIZE) {
@@ -931,6 +948,18 @@ const processDroppedFile = (event: DragEvent) => {
 .select-group {
     display: flex;
     width: 60%;
+}
+
+.top-bar-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.llm-trace-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .drop-zone-overlay {
