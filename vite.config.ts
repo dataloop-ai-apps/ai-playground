@@ -12,7 +12,7 @@ export default defineConfig({
     base: '/ai',
     server: {
         host: '0.0.0.0',
-        https: false,
+        https: true,
         port: 8084
     },
     optimizeDeps: {
@@ -32,7 +32,7 @@ export default defineConfig({
             '@': '/src'
         }
     },
-    plugins: [viteBasicSslPlugin(), vue()],
+    plugins: [viteBasicSslPlugin({ domains: ['local.dataloop.ai', 'localhost'] }), vue()],
     test: {
         environment: 'jsdom',
         setupFiles: ['tests/setup.js'],

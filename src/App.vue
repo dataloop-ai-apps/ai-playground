@@ -23,6 +23,9 @@
                 </div>
             </div>
 
+            <div style="background: red; color: white; text-align: center; padding: 4px; font-weight: bold">
+                LOCAL DEBUG MODE
+            </div>
             <div class="top-bar">
                 <div class="select-group">
                     <dl-select
@@ -56,10 +59,7 @@
                 <div class="top-bar-actions">
                     <div class="llm-trace-toggle">
                         <dl-typography variant="small" color="var(--dell-gray-800)">LLM Trace</dl-typography>
-                        <dl-switch
-                            :model-value="useLlmTrace"
-                            @update:model-value="toggleLlmTrace"
-                        />
+                        <dl-switch :model-value="useLlmTrace" @update:model-value="toggleLlmTrace" />
                     </div>
                     <dl-button
                         round

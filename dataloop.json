@@ -1,6 +1,6 @@
 {
-    "displayName": "AI Playground",
-    "name": "ai-playground",
+    "displayName": "AI Playground Test",
+    "name": "ai-playground-test",
     "scope": "public",
     "version": "0.0.30",
     "attributes": {
@@ -15,7 +15,7 @@
     "components": {
         "panels": [
             {
-                "name": "ai",
+                "name": "ai-test",
                 "supportedSlots": [
                     {
                         "type": "aiPlayground"
@@ -51,7 +51,7 @@
                 "name": "ai-chat-service",
                 "moduleName": "ai_chat_module",
                 "botUserName": "tab-apps@dataloop.ai",
-                "panelNames": ["ai"],
+                "panelNames": ["ai-test"],
                 "runtime": {
                     "runnerImage": "gcr.io/viewo-g/piper/agent/cpu/ingest-gradio:0.1.16",
                     "podType": "regular-m",
