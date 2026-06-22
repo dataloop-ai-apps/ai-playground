@@ -199380,7 +199380,7 @@ https://github.com/highlightjs/highlight.js/issues/2277`
                                                               'onUpdate:modelValue':
                                                                   X[3] ||
                                                                   (X[3] = (ne) => (Vi(o) ? (o.value = ne) : null)),
-                                                              placeholder: 'Ask Dataloop AI',
+                                                              placeholder: 'Ask DDOE AI',
                                                               onKeydown: F,
                                                               onInput: z,
                                                               hideClearButton: '',
