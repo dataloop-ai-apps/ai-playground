@@ -30,6 +30,7 @@
                         v-model="choosed_option"
                         :options="choose_options"
                         size="m"
+                        dropdown-max-height="40vh"
                         :width="'140px'"
                         @change="handleOptionChange"
                     />
@@ -49,6 +50,15 @@
                         searchable
                         :options="model_options"
                         placeholder="Choose a model"
+                        size="m"
+                        width="60%"
+                    />
+
+                    <dl-select
+                        v-if="choosed_option === 'Jarvis'"
+                        v-model="selectedOption"
+                        :options="jarvis_mode_options"
+                        placeholder="Choose mode"
                         size="m"
                         width="60%"
                     />
@@ -93,7 +103,14 @@
 
                             <div v-else class="status-message">
                                 <span>
-                                    {{ choosed_option === 'Pipeline' ? 'Pipeline' : 'Model' }} execution:
+                                    {{
+                                        choosed_option === 'Pipeline'
+                                            ? 'Pipeline'
+                                            : choosed_option === 'Jarvis'
+                                            ? 'Jarvis'
+                                            : 'Model'
+                                    }}
+                                    execution:
                                     {{ statusMessage }}
                                 </span>
                                 <dl-spinner type="clock" :size="'10px'" class="inline-spinner" />
@@ -135,7 +152,7 @@
                     <dl-text-area
                         ref="textarea"
                         v-model="userQuestion"
-                        placeholder="Ask Dataloop AI"
+                        placeholder="Ask DDOE AI"
                         @keydown="handleKeyDown"
                         @input="autoResize"
                         hideClearButton
@@ -218,7 +235,11 @@ const project_id = ref<string>('')
 const selectedOption = ref<{ label: string; value: string }>()
 
 const last_option = ref<string>('Pipeline')
-const choose_options = ref(['Model', 'Pipeline'])
+const jarvis_mode_options = [
+    { label: 'API', value: 'api' },
+    { label: 'Local', value: 'local' }
+]
+const choose_options = ref(['Model', 'Pipeline', 'Jarvis'])
 const choosed_option = ref<string>('Pipeline')
 const pipeline_options = ref<{ label: string; value: string }[]>([])
 
@@ -355,7 +376,7 @@ const fetchData = async (project_id: string) => {
 const sendMessage = async () => {
     if (!userQuestion.value || askDisabled.value || isProcessing.value) return
 
-    // Check if a pipeline or model is selected
+    // Check if a pipeline, model, or Jarvis mode is selected
     if (!selectedOption.value) {
         alertType.value = 'warning'
         showAlert.value = true
@@ -387,12 +408,19 @@ const sendMessage = async () => {
             sender: 'bot'
         })
 
+        const streamType =
+            choosed_option.value === 'Jarvis'
+                ? `jarvis_${selectedOption.value.value}`
+                : choosed_option.value === 'Pipeline'
+                ? 'pipeline'
+                : 'model'
+        const valueId = selectedOption.value.value
         const formData = new FormData()
         formData.append('message', userQuestionValue)
         formData.append('session_id', sessionId.value)
         formData.append('project_id', project_id.value)
-        formData.append('stream_type', choosed_option.value === 'Pipeline' ? 'pipeline' : 'model')
-        formData.append('value_id', selectedOption.value.value)
+        formData.append('stream_type', streamType)
+        formData.append('value_id', valueId)
         if (selectedImage.value) {
             const MAX_FILE_SIZE = 50 * 1024 * 1024
             if (selectedImage.value.size > MAX_FILE_SIZE) {
@@ -433,9 +461,9 @@ const sendMessage = async () => {
         const data = await response.json()
         const params = new URLSearchParams({
             project_id: project_id.value,
-            value_id: selectedOption.value.value,
+            value_id: valueId,
             item_id: data.item_id,
-            stream_type: choosed_option.value === 'Pipeline' ? 'pipeline' : 'model',
+            stream_type: streamType,
             execution_id: data.execution_id
         })
         const eventSource = new EventSource(`/stream?${params.toString()}`)
@@ -452,6 +480,10 @@ const sendMessage = async () => {
                     case 'system':
                         messageQueue.value.push(data.text)
                         processQueue()
+                        break
+                    case 'token':
+                        messages.value[messages.value.length - 1].text += data.text
+                        scrollToBottom()
                         break
                     case 'done':
                         eventSource.close()
