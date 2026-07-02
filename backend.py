@@ -150,7 +150,7 @@ class Handler:
             execution_id = execution.id
             logger.info("[start_stream] Model execution started: execution_id=%s", execution_id)
 
-        elif stream_type in ("jarvis_api", "jarvis_local"):
+        elif stream_type in ("jarvis", "jarvis_api", "jarvis_local"):
             execution_id = "jarvis"
             logger.info("[start_stream] Jarvis mode — no Dataloop execution, ready to stream")
 
@@ -167,27 +167,6 @@ class Handler:
                 content = " ".join(c["text"] for c in content if c.get("type") == "text")
             messages.append({"role": msg["role"], "content": content})
         return messages
-
-    @staticmethod
-    async def _fetch_jarvis_model(base: str, token: str, org_id: str) -> str:
-        models_url = f"{base}/models" + (f"?org={org_id}" if org_id else "")
-        logger.info("[_fetch_jarvis_model] Fetching from: %s", models_url)
-        try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                resp = await client.get(models_url, headers={"Authorization": f"Bearer {token}"})
-            if resp.status_code == 200:
-                data = resp.json()
-                model_ids = [m["id"] for m in (data.get("data", []) if isinstance(data, dict) else [])]
-                logger.info("[_fetch_jarvis_model] Available models (%d): %s", len(model_ids), model_ids)
-                if model_ids:
-                    logger.info("[_fetch_jarvis_model] Selected: %s", model_ids[0])
-                    return model_ids[0]
-                logger.warning("[_fetch_jarvis_model] No models returned, falling back to 'auto'")
-            else:
-                logger.warning("[_fetch_jarvis_model] status=%d body=%s", resp.status_code, resp.text[:200])
-        except Exception as e:
-            logger.warning("[_fetch_jarvis_model] Exception: %s — falling back to 'auto'", e)
-        return "auto"
 
     @staticmethod
     async def _call_jarvis_stream(base: str, token: str, org_id: str, model_id: str, messages: list):
@@ -271,16 +250,14 @@ class Handler:
         except Exception as e:
             logger.warning("[_save_jarvis_response] Failed: %s", e)
 
-    async def _stream_jarvis(self, stream_type: str, prompt_item):
+    async def _stream_jarvis(self, model_id: str, prompt_item):
         messages = self._build_messages(prompt_item)
-        logger.info("[_stream_jarvis] mode=%s messages_in_history=%d", stream_type, len(messages))
+        logger.info("[_stream_jarvis] model_id=%s messages_in_history=%d", model_id, len(messages))
 
         base = f"{dl.environment()}/ai"
         token = dl.client_api.token
         org_id = await resolve_org_id(self.run_in_threadpool)
         logger.info("[_stream_jarvis] org_id=%s", org_id)
-        model_id = await self._fetch_jarvis_model(base, token, org_id)
-        logger.info("[_stream_jarvis] model_id=%s", model_id)
 
         full_response = ""
         try:
@@ -304,9 +281,9 @@ class Handler:
         prompt_item = dl.PromptItem.from_item(item=item)
         logger.debug("[stream] PromptItem loaded: prompts=%d", len(prompt_item.prompts))
 
-        if stream_type in ("jarvis_api", "jarvis_local"):
-            logger.info("[stream] Delegating to Jarvis handler")
-            async for event in self._stream_jarvis(stream_type, prompt_item):
+        if stream_type in ("jarvis", "jarvis_api", "jarvis_local"):
+            logger.info("[stream] Delegating to Jarvis handler, model_id=%s", value_id)
+            async for event in self._stream_jarvis(value_id, prompt_item):
                 yield event
             return
 
@@ -448,6 +425,48 @@ async def stream_response(project_id: str, value_id: str, item_id: str, stream_t
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
     )
+
+
+@app.get("/jarvis-models")
+async def get_jarvis_models():
+    logger.info("[GET /jarvis-models]")
+    try:
+        base = f"{dl.environment()}/ai"
+
+        async def _fetch(token: str, oid: str) -> httpx.Response:
+            models_url = f"{base}/models" + (f"?org={oid}" if oid else "")
+            logger.info("[GET /jarvis-models] fetching: %s", models_url)
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                return await client.get(models_url, headers={"Authorization": f"Bearer {token}"})
+
+        org_id = await resolve_org_id(Handler.run_in_threadpool)
+        resp = await _fetch(dl.client_api.token, org_id)
+
+        if resp.status_code == 401:
+            logger.info("[GET /jarvis-models] 401 received, refreshing token via login_m2m")
+            await Handler.run_in_threadpool(
+                dl.login_m2m,
+                email=os.getenv("EMAIL", ""),
+                password=os.getenv("PASSWORD", ""),
+            )
+            global _cached_org_id
+            _cached_org_id = ""  # force re-fetch with the new valid token
+            org_id = await resolve_org_id(Handler.run_in_threadpool)
+            resp = await _fetch(dl.client_api.token, org_id)
+
+        if resp.status_code == 200:
+            data = resp.json()
+            models = [{"id": m["id"], "providerId": m["providerId"]} for m in (data.get("data", []) if isinstance(data, dict) else [])]
+            logger.info("[GET /jarvis-models] returning %d models", len(models))
+            return {"models": models}
+        else:
+            logger.warning("[GET /jarvis-models] status=%d body=%s", resp.status_code, resp.text[:200])
+            raise HTTPException(status_code=resp.status_code, detail="Failed to fetch Jarvis models")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("[GET /jarvis-models] ERROR:")
+        raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
 _panels_dir = current_dir + "/panels/ai"

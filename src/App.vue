@@ -30,7 +30,7 @@
                         v-model="choosed_option"
                         :options="choose_options"
                         size="m"
-                        dropdown-max-height="40vh"
+                        dropdown-max-height="60vh"
                         :width="'140px'"
                         @change="handleOptionChange"
                     />
@@ -57,8 +57,9 @@
                     <dl-select
                         v-if="choosed_option === 'Jarvis'"
                         v-model="selectedOption"
-                        :options="jarvis_mode_options"
-                        placeholder="Choose mode"
+                        searchable
+                        :options="jarvis_model_options"
+                        placeholder="Choose a model"
                         size="m"
                         width="60%"
                     />
@@ -235,10 +236,8 @@ const project_id = ref<string>('')
 const selectedOption = ref<{ label: string; value: string }>()
 
 const last_option = ref<string>('Pipeline')
-const jarvis_mode_options = [
-    { label: 'API', value: 'api' },
-    { label: 'Local', value: 'local' }
-]
+const jarvis_model_options = ref<{ label: string; value: string }[]>([])
+const jarvisModelsLoaded = ref<boolean>(false)
 const choose_options = ref(['Model', 'Pipeline', 'Jarvis'])
 const choosed_option = ref<string>('Pipeline')
 const pipeline_options = ref<{ label: string; value: string }[]>([])
@@ -323,27 +322,51 @@ const handleOptionChange = (value: string) => {
         selectedOption.value = null
         last_option.value = value
     }
+    if (value === 'Jarvis') {
+        fetchJarvisModels()
+    }
 }
 
 const handleClick = () => {
     fileInput.value?.click()
 }
 
-const getEntities = async (entityType: 'pipelines' | 'models', project_id: string) => {
+const fetchJarvisModels = async () => {
+    if (jarvisModelsLoaded.value) return
+    try {
+        const response = await fetch('/jarvis-models')
+        if (response.ok) {
+            const data = await response.json()
+            jarvis_model_options.value = (data.models as { id: string }[]).map((m) => ({
+                label: m.id,
+                value: m.id
+            }))
+            jarvisModelsLoaded.value = true
+        } else {
+            console.error('Failed to fetch Jarvis models:', response.status)
+        }
+    } catch (error) {
+        console.error('Error fetching Jarvis models:', error)
+    }
+}
+
+const getEntities = async (entityType: 'pipelines' | 'models' | 'ai', project_id: string) => {
     const pageSize = 50
     let page = 0
     let entitiesList: any[] = []
     let response
 
     do {
-        // @ts-ignore
-        response = await window.dl[entityType].query({
-            filter: { $and: [{ projectId: project_id }] },
-            page,
-            pageSize,
-            resource: entityType
-        })
-
+        if (entityType == 'ai') {
+            // response = await window.dl.ai.listModels()
+        } else {
+            response = await window.dl[entityType].query({
+                filter: { $and: [{ projectId: project_id }] },
+                page,
+                pageSize,
+                resource: entityType
+            })
+        }
         entitiesList.push(...response.items)
         page++
     } while (response.totalItemsCount > entitiesList.length)
@@ -355,7 +378,8 @@ const getEntities = async (entityType: 'pipelines' | 'models', project_id: strin
 const fetchData = async (project_id: string) => {
     const [pipelines, models] = await Promise.all([
         getEntities('pipelines', project_id),
-        getEntities('models', project_id)
+        getEntities('models', project_id),
+        // getEntities('ai', project_id)
     ])
 
     pipeline_options.value = pipelines
@@ -410,7 +434,7 @@ const sendMessage = async () => {
 
         const streamType =
             choosed_option.value === 'Jarvis'
-                ? `jarvis_${selectedOption.value.value}`
+                ? 'jarvis'
                 : choosed_option.value === 'Pipeline'
                 ? 'pipeline'
                 : 'model'

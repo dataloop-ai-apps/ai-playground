@@ -1,6 +1,9 @@
 FROM hub.dataloop.ai/dtlpy-runner-images/cpu:python3.11_opencv
 
-RUN pip install --user fastapi uvicorn dtlpy python-multipart
+RUN pip install --user fastapi uvicorn dtlpy python-multipart httpx \
+    --trusted-host pypi.org \
+    --trusted-host files.pythonhosted.org \
+    --trusted-host pypi.python.org
 
 USER root
 
@@ -24,5 +27,10 @@ RUN openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 
 # Copy application files
 WORKDIR /tmp/app
+COPY . /tmp/app
 
+RUN sed -i 's/\r//' /tmp/app/start_dev.sh && chmod +x /tmp/app/start_dev.sh
 
+EXPOSE 3000
+
+CMD ["/bin/bash", "/tmp/app/start_dev.sh"]
