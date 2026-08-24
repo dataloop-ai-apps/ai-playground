@@ -135,7 +135,7 @@
                     <dl-text-area
                         ref="textarea"
                         v-model="userQuestion"
-                        placeholder="Ask Dataloop AI"
+                        placeholder="Ask DDOE AI"
                         @keydown="handleKeyDown"
                         @input="autoResize"
                         hideClearButton

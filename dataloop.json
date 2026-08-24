@@ -4,8 +4,8 @@
     "scope": "public",
     "version": "0.0.31",
     "attributes": {
-        "Provider": "Dataloop",
-        "deployed By": "Dataloop"
+        "Provider": "DDOE",
+        "deployed By": "DDOE"
     },
     "codebase": {
         "type": "git",
