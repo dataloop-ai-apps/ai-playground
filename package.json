@@ -8,7 +8,7 @@
         "preview": "vite preview",
         "lint": "eslint ./src --ext .ts,.vue ",
         "lint:fix": "eslint ./src --ext .ts,.vue --fix",
-        "lint-staged": "lint-staged",
+        "lint-staged": "node .lint-staged.mjs",
         "test": "vitest",
         "test:coverage": "vitest run --coverage --silent",
         "check-only": "if grep -E -H -r --exclude-dir=.git --exclude-dir=node_modules --exclude=*.json --exclude=*.yml '^(describe|it).only' .; then echo 'Found only in test files' && exit 1; fi"
@@ -48,13 +48,13 @@
         "vue-tsc": "^2.0.6"
     },
     "lint-staged": {
-        "*.ts": [
+        "src/**/*.ts": [
             "prettier --write"
         ],
-        "*.js": [
+        "src/**/*.js": [
             "prettier --write"
         ],
-        "*.vue": [
+        "src/**/*.vue": [
             "prettier --write"
         ]
     },
