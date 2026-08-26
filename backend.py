@@ -5,13 +5,6 @@ import uuid
 import time
 import traceback
 import dtlpy as dl
-
-# Workaround: dtlpy removed FreeText.coordinates but _load_annotations_prompts still calls it (unfixed as of 1.125.6)
-# TODO: remove once dtlpy fixes _load_annotations_prompts to call to_coordinates() instead
-from dtlpy.entities.annotation_definitions import FreeText as _FreeText
-if not hasattr(_FreeText, 'coordinates'):
-    _FreeText.coordinates = property(lambda self: self.text)
-
 import numpy as np
 from fastapi.staticfiles import StaticFiles
 import os
